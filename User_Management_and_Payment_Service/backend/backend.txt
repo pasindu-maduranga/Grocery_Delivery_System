@@ -1,1 +1,0 @@
-user management and payment service backend
