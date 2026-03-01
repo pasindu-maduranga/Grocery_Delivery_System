@@ -1,6 +1,7 @@
 const User = require('../models/UserModel');
 const bcrypt = require('bcryptjs');
 const generateAccessToken = require('../utils/generateToken');
+const { password } = require('../models/userCommonSchema');
 
 //register new user
 const registerUser = async(data) => {
@@ -60,6 +61,30 @@ const registerUser = async(data) => {
     };
 };
 
+//login
+const loginUser = async({email, password}) => {
+    const user = await User.findOne({email});
+    if(!user || !user.isActive){
+        throw new Error('Invalid user account');
+    }
+
+    const matchUser = await bcrypt.compare(password, user.password);
+    if(!matchUser){
+        throw new Error('Invalid user account');
+    }
+
+    user.lastLogin = new Date();
+    await user.save();
+
+    const token = generateAccessToken(user);
+    return {
+        user,
+        token
+    };
+};
+
+
 module.exports = { 
-    registerUser
+    registerUser,
+    loginUser
 };
