@@ -1,4 +1,4 @@
-const VEHICLE_TYPES = require("../enums/VehicleType");
+const { VEHICLE_TYPES } = require("../enums/VehicleType");
 
 module.exports = {
   vehicleType: { type: String, enum: VEHICLE_TYPES, default: "motorcycle" },
