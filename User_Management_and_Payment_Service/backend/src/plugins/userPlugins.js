@@ -8,3 +8,5 @@ function hideSensitiveFields(schema){
         return user;
     }
 }
+
+module.exports = hideSensitiveFields;

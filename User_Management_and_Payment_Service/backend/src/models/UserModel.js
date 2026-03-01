@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
-const hideSensitiveFields = require('../core/userPlugins');
+const bcrypt = require('bcryptjs');
+const hideSensitiveFields = require('../plugins/userPlugins');
 const deliveryPersonFields = require('./DeliveryPerson');
 const groceryStoreOwnerFields = require('./GroceryStoreOwner');
 const commonUserFields = require('./userCommonSchema');
@@ -19,5 +20,19 @@ const userSchema = new mongoose.Schema({
 
 // Method to hide password in API responses
 userSchema.plugin(hideSensitiveFields);
+
+// Hash password before save
+// userSchema.pre('save', async function(next) {
+//     if(!this.isModified('password')){
+//         return next();
+//     }
+//     this.password = await bcrypt.hash(this.password, 12);
+//     next();
+// });
+
+// Method to compare password during login
+// userSchema.methods.comparePassword = async function (candidatePassword) {
+//     return bcrypt.compare(candidatePassword, commonUserFields.password);
+// };
 
 module.exports = mongoose.model('User', userSchema);
