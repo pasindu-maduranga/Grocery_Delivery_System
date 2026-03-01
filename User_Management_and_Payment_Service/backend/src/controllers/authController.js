@@ -1,4 +1,4 @@
-const { registerUser } = require('../services/authService');
+const { registerUser, loginUser } = require('../services/authService');
 const filteredUserFields = require('./filterUserController');
 
 //register new user
@@ -19,6 +19,24 @@ const registerNewUser = async(req, res) => {
     }
 };
 
+//login
+const userLogin = async(req, res) => {
+    try{
+        const result = await loginUser(req.body);
+        res.status(201).json ({
+            success: true,
+            message: 'User login successful',
+            ...result
+        });
+    }catch(error){
+        res.status(400).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
 module.exports = { 
-    registerNewUser
+    registerNewUser,
+    userLogin
 };

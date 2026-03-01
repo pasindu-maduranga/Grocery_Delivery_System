@@ -14,4 +14,6 @@ module.exports = {
     resetPasswordExpires: { type: Date },
     verificationToken: { type: String },
     lastLogin: { type: Date },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
 }
