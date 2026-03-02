@@ -1,4 +1,4 @@
-const { registerUser, loginUser } = require('../services/authService');
+const { registerUser, loginUser, forgotPassword, resetPassword } = require('../services/authService');
 const filteredUserFields = require('./filterUserController');
 
 //register new user
@@ -50,10 +50,75 @@ const googleCallback = async(req,res) => {
             user: req.user.user 
         });
     }
-}
+};
+
+//forgot password
+const forgotAppPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json(
+        { 
+            success: false, 
+            message: 'Valid email is required' 
+        });
+    }
+
+    const result = await forgotPassword(email);
+
+    res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (err) {
+    console.error('Forgot password error:', err.message);
+    res.status(400).json(
+        { 
+            success: false, 
+            message: err.message 
+        });
+  }
+};
+
+//reset password
+const resetUserPassword = async (req, res) => {
+  try {
+    const { email, token, password } = req.body;
+
+    if (!email || !token || !password) {
+      return res.status(400).json(
+        { 
+            success: false, 
+            message: 'Email, token and new password required' 
+        });
+    }
+
+    const result = await resetPassword({ 
+            email, 
+            token, 
+            newPassword: password 
+        });
+
+    res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (err) {
+    console.error('Reset password error:', err.message);
+    res.status(400).json(
+        { 
+            success: false, 
+            message: err.message 
+        });
+  }
+};
+
 
 module.exports = { 
     registerNewUser,
     userLogin,
-    googleCallback
+    googleCallback,
+    forgotAppPassword,
+    resetUserPassword
 };
