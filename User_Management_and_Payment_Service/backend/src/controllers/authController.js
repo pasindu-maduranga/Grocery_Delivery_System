@@ -36,7 +36,24 @@ const userLogin = async(req, res) => {
     }
 };
 
+//google sign-in
+const googleCallback = async(req,res) => {
+    const token = req.user.token;
+    if (process.env.FRONTEND_URL) {
+        res.redirect(
+            `${process.env.FRONTEND_URL}/login?token=${token}`
+        );
+    } else {
+        res.json({ 
+            success: true, 
+            token, 
+            user: req.user.user 
+        });
+    }
+}
+
 module.exports = { 
     registerNewUser,
-    userLogin
+    userLogin,
+    googleCallback
 };
