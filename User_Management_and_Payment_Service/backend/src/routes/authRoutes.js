@@ -30,4 +30,10 @@ authRouter.get(
     user.googleCallback 
 );
 
+//http://localhost:5003/api/auth/forgot-password
+authRouter.post('/forgot-password', user.forgotAppPassword);
+
+//http://localhost:5003/api/auth/reset-password
+authRouter.post('/reset-password', user.resetUserPassword);
+
 module.exports = authRouter;
