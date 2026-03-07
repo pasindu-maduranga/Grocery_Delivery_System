@@ -5,10 +5,16 @@ const connectDB = require('./src/config/db');
 const routes = require('./src/routes/indexRoutes');
 const sessionSetup = require('./src/services/sessionSetup');
 const passport = require('./src/utils/passportUtils');
+const cors = require('cors');
 
 connectDB();
 
 const app = express();
+
+app.use(cors({
+    origin: 'http://localhost:5173', // frontend URL
+    credentials: true
+}));
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
