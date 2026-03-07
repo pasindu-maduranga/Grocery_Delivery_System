@@ -9,7 +9,10 @@ import { NotFoundPage } from './pages/ErrorPages'
 import ParentMenusPage from './pages/ParentMenusPage'
 import MenusPage from './pages/MenusPage'
 import ScreensPage from './pages/ScreensPage'
+import PaymentPage from './pages/Payment/PaymentPage'
+import SuccessPage from './pages/Payment/SuccessPage'
 import React from 'react'
+import CancelPage from './pages/Payment/CancelPage'
 
 export default function App() {
   return (
@@ -20,6 +23,15 @@ export default function App() {
         <Route path="/login" element={
           <PublicRoute><LoginPage /></PublicRoute>
         } />
+
+        <Route path="/payment" element={
+          <PublicRoute>
+            <PaymentPage />
+          </PublicRoute>
+        } />
+
+        <Route path="/payment/success" element={<SuccessPage />} />
+        <Route path="/payment/cancel" element={<CancelPage />} />
 
         <Route path="/dashboard" element={
           <PrivateRoute><DashboardPage /></PrivateRoute>
@@ -63,6 +75,8 @@ export default function App() {
           } />
 
         <Route path="*" element={<NotFoundPage />} />
+
+        
       </Routes>
     </AuthProvider>
   )

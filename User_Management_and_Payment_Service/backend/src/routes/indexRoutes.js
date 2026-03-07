@@ -1,5 +1,6 @@
 const path = require('path');
 const authRoutes = require('./authRoutes');
+const paymentRoutes = require('./paymentRoutes');
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const options = {
@@ -42,4 +43,5 @@ console.log('Swagger api-endpoint: http://localhost:5003/api-docs');
 module.exports = (app) => {
     app.use('/api/auth', authRoutes);
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+    app.use('/api/payment', paymentRoutes);
 }
