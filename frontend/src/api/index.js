@@ -62,5 +62,16 @@ export const modulesAPI = {
   updateScreen: (id, data) => api.put(`/modules/screens/${id}`, data),
   toggleScreen: (id) => api.patch(`/modules/screens/${id}/toggle`),
 }
+export const suppliersAPI = {
+  getAll:        (params) => api.get('/suppliers', { params }),
+  getById:       (id) => api.get(`/suppliers/${id}`),
+  create:        (formData) => api.post('/suppliers', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  update:        (id, formData) => api.put(`/suppliers/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  approve:       (id, data) => api.patch(`/suppliers/${id}/approve`, data),
+  reject:        (id, data) => api.patch(`/suppliers/${id}/reject`, data),
+  toggleActive:  (id) => api.patch(`/suppliers/${id}/toggle-active`),
+  toggleLock:    (id) => api.patch(`/suppliers/${id}/toggle-lock`),
+}
+
 
 export default api

@@ -9,6 +9,8 @@ import { NotFoundPage } from './pages/ErrorPages'
 import ParentMenusPage from './pages/ParentMenusPage'
 import MenusPage from './pages/MenusPage'
 import ScreensPage from './pages/ScreensPage'
+import SuppliersPage from './GrocerysupplierManagment/SuppliersPage'
+import SupplierFormPage from './GrocerysupplierManagment/SupplierFormPage'
 import React from 'react'
 
 export default function App() {
@@ -61,6 +63,15 @@ export default function App() {
               </PermissionRoute>
             </PrivateRoute>
           } />
+          <Route path="/suppliers" element={
+          <PrivateRoute><PermissionRoute screenCode="SCREEN_SUPPLIERS"><SuppliersPage /></PermissionRoute></PrivateRoute>
+        } />
+        <Route path="/suppliers/add" element={
+          <PrivateRoute><PermissionRoute screenCode="SCREEN_SUPPLIERS_ADD"><SupplierFormPage /></PermissionRoute></PrivateRoute>
+        } />
+        <Route path="/suppliers/edit/:id" element={
+          <PrivateRoute><PermissionRoute screenCode="SCREEN_SUPPLIERS_ADD"><SupplierFormPage /></PermissionRoute></PrivateRoute>
+        } />
 
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

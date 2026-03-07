@@ -33,6 +33,9 @@ const ROUTE_SCREEN_MAP = {
   '/api/transactions': 'SCREEN_TRANSACTIONS',
 };
 
+/**
+ * HTTP METHOD → PERMISSION TYPE MAP
+ */
 const METHOD_PERMISSION_MAP = {
   GET: 'canView',
   POST: 'canCreate',
@@ -41,7 +44,10 @@ const METHOD_PERMISSION_MAP = {
   DELETE: 'canDelete',
 };
 
-
+/**
+ * authenticate
+ * Verifies JWT and attaches user + permissions to req
+ */
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -73,15 +79,28 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-
+/**
+ * authorizeScreen
+ * Checks if the user's role has the required permission for the screen
+ * that the requested route maps to.
+ *
+ * Usage in routes:
+ *   router.get('/', authenticate, authorizeScreen, controller.getAll)
+ *   — automatically detects the route and HTTP method
+ */
 const authorizeScreen = (req, res, next) => {
+  // Super admin bypasses all permission checks
   if (req.isSuperAdmin) return next();
 
+  // Find which screen this route maps to
   const screenCode = getScreenCodeForRoute(req.path, req.baseUrl);
-  if (!screenCode) return next(); 
+  if (!screenCode) return next(); // unmapped routes are public (e.g. /api/health)
+
+  // Determine what permission type is needed (view/create/edit/delete)
   const permissionType = METHOD_PERMISSION_MAP[req.method];
   if (!permissionType) return next();
 
+  // Check if user's role has this permission
   const permission = req.permissions.find((p) => p.screenCode === screenCode);
 
   if (!permission || !permission[permissionType]) {
@@ -96,7 +115,11 @@ const authorizeScreen = (req, res, next) => {
   next();
 };
 
-
+/**
+ * requireSuperAdmin
+ * Hard guard — only super admin can access the route
+ * Used on: /api/system-users, /api/roles, /api/parent-menus, etc.
+ */
 const requireSuperAdmin = (req, res, next) => {
   if (!req.isSuperAdmin) {
     return res.status(403).json({
@@ -107,10 +130,13 @@ const requireSuperAdmin = (req, res, next) => {
   next();
 };
 
-
+/**
+ * Helper: resolve route path to a screen code
+ */
 const getScreenCodeForRoute = (path, baseUrl) => {
   const fullPath = baseUrl + path;
 
+  // Try longest match first (more specific routes first)
   const sortedRoutes = Object.keys(ROUTE_SCREEN_MAP).sort((a, b) => b.length - a.length);
 
   for (const routePrefix of sortedRoutes) {
@@ -122,3 +148,24 @@ const getScreenCodeForRoute = (path, baseUrl) => {
 };
 
 module.exports = { authenticate, authorizeScreen, requireSuperAdmin };
+
+/**
+ * checkPermission(screenCode, action)
+ * Explicit permission check middleware — for routes with mixed screen codes
+ * Usage: router.post('/', checkPermission('SCREEN_SUPPLIERS_ADD', 'canCreate'), handler)
+ */
+const checkPermission = (screenCode, action) => (req, res, next) => {
+  if (req.isSuperAdmin) return next();
+  const perm = req.permissions.find(p => p.screenCode === screenCode);
+  if (!perm || !perm[action]) {
+    return res.status(403).json({
+      success: false,
+      message: `Access denied. You need ${action} on ${screenCode}`,
+      screenCode, action,
+    });
+  }
+  next();
+};
+
+// Re-export with checkPermission
+module.exports = { authenticate, authorizeScreen, requireSuperAdmin, checkPermission };
