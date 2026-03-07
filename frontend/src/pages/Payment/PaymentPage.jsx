@@ -10,7 +10,7 @@ export default function PaymentPage() {
   const handlePayment = async () => {
     setLoading(true);
     try {
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/payment/create-checkout-session`, {
+      const response = await axios.post(`${import.meta.env.VITE_API_URL_ORDER}/payment/create-checkout-session`, {
         amount: 0.5, // Example amount in dollars
         currency: 'usd',
         product: { name: 'Sample Product', description: 'Test payment' }
