@@ -1,0 +1,9 @@
+docker stop user-payment-service; docker rm user-payment-service; docker build -t grocery-user-payment-service .; docker run -d -p 5003:5003 --name user-payment-service --env-file .env grocery-user-payment-service
+
+
+# Check container is running
+docker p s
+
+# Check logs to confirm no errors
+docker logs user-payment-service
+
