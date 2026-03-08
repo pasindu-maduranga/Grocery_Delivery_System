@@ -39,25 +39,28 @@ const CustomerRegisterForm = () => {
       return;
     }
 
-    setLoading(true); 
+    setLoading(true);
     if (formData.password.length < 6) {
       toast.error("Password must be at least 6 characters");
       return;
     }
 
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/register`, {
-        name: formData.name,
-        email: formData.email,
-        phoneNo: formData.phoneNo,
-        password: formData.password,
-        address: formData.address,
-        role: "customer",
-      });
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL}/auth/register`,
+        {
+          name: formData.name,
+          email: formData.email,
+          phoneNo: formData.phoneNo,
+          password: formData.password,
+          address: formData.address,
+          role: "customer",
+        },
+      );
       toast.success(res.data.message || "Account created successfully!");
       navigate("/login");
     } catch (err) {
-        toast.error(err.response?.data?.message || "Registration failed");
+      toast.error(err.response?.data?.message || "Registration failed");
     }
   };
 
@@ -70,7 +73,6 @@ const CustomerRegisterForm = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 px-4 py-12">
       <div className="w-full max-w-md">
-
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-green-500 rounded-2xl mb-4 shadow-lg shadow-green-200">
@@ -80,17 +82,20 @@ const CustomerRegisterForm = () => {
             Create Account
           </h1>
           <p className="text-gray-500 text-sm">
-            Join <span className="text-green-600 font-semibold">RapidCart</span> and start shopping for fresh groceries
+            Join <span className="text-green-600 font-semibold">RapidCart</span>{" "}
+            and start shopping for fresh groceries
           </p>
         </div>
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/60 p-8 border border-gray-100">
           <form onSubmit={handleSubmit} className="space-y-4">
-
             {/* Full Name */}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-gray-700 mb-1.5"
+              >
                 Full Name*
               </label>
               <div className="relative">
@@ -109,7 +114,10 @@ const CustomerRegisterForm = () => {
 
             {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-1.5"
+              >
                 Email Address*
               </label>
               <div className="relative">
@@ -128,7 +136,10 @@ const CustomerRegisterForm = () => {
 
             {/* Phone */}
             <div>
-              <label htmlFor="phoneNo" className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label
+                htmlFor="phoneNo"
+                className="block text-sm font-medium text-gray-700 mb-1.5"
+              >
                 Phone Number
               </label>
               <div className="relative">
@@ -147,7 +158,10 @@ const CustomerRegisterForm = () => {
 
             {/* Address */}
             <div>
-              <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label
+                htmlFor="address"
+                className="block text-sm font-medium text-gray-700 mb-1.5"
+              >
                 Address
               </label>
               <div className="relative">
@@ -167,7 +181,10 @@ const CustomerRegisterForm = () => {
             {/* Password row */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700 mb-1.5"
+                >
                   Password*
                 </label>
                 <div className="relative">
@@ -186,7 +203,10 @@ const CustomerRegisterForm = () => {
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-medium text-gray-700 mb-1.5"
+                >
                   Confirm Password*
                 </label>
                 <div className="relative">
@@ -231,7 +251,9 @@ const CustomerRegisterForm = () => {
 
         <p className="text-center text-xs text-gray-400 mt-6">
           By creating an account, you agree to our{" "}
-          <span className="text-green-600 cursor-pointer hover:underline">Terms of Service</span>
+          <span className="text-green-600 cursor-pointer hover:underline">
+            Terms of Service
+          </span>
         </p>
       </div>
     </div>

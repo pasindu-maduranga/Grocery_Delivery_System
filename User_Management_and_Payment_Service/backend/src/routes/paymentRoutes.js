@@ -1,7 +1,8 @@
 const express = require('express');
 const paymentRouter = express.Router();
 const paymentController = require('../controllers/paymentController');
+const authMiddleware = require('../middleware/authMiddleware');
 
-paymentRouter.post('/create-checkout-session', paymentController);
+paymentRouter.post('/create-checkout-session', authMiddleware, paymentController.paymentStripe);
 
 module.exports=paymentRouter;
