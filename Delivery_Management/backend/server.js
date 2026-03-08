@@ -14,7 +14,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-const deliveryRoutes = require('./src/routes/delivery.routes');
+const deliveryRoutes = require('./src/routes/deliveryRoutes');
 app.use('/api/delivery', deliveryRoutes);
 
 // Test Route
