@@ -2,7 +2,9 @@ name: Backend CI/CD
 
 on:
   push:
-    branches: [main, development, dev]
+    branches: [main, development, dev, ci-cd/sewmi]
+  pull_request:
+    branches: [ "development" ]
 
 jobs:
 
