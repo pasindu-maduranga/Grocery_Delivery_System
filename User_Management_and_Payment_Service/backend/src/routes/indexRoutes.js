@@ -1,6 +1,8 @@
 const path = require('path');
 const authRoutes = require('./authRoutes');
 const paymentRoutes = require('./paymentRoutes');
+const userRoutes = require('./userRoutes');
+const cartRoutes = require('./cartRoutes');
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const options = {
@@ -44,4 +46,6 @@ module.exports = (app) => {
     app.use('/api/auth', authRoutes);
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
     app.use('/api/payment', paymentRoutes);
+    app.use('/api/user', userRoutes);
+    app.use('/api/cart', cartRoutes);
 }
