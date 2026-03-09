@@ -139,5 +139,3 @@ dist
 .vite/deps
 frontend/.vite/deps/package.json
 frontend/.vite/deps/_metadata.json
-
-package-lock.json
