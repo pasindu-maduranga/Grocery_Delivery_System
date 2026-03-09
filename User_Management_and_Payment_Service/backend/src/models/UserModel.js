@@ -9,10 +9,10 @@ const userSchema = new mongoose.Schema({
     ...commonUserFields,
     
     // Delivery person specific fields
-    ...deliveryPersonFields,
+    // ...deliveryPersonFields,
     
     // Grocery Store owner specific fields
-    ...groceryStoreOwnerFields,
+    // ...groceryStoreOwnerFields,
 }, {
     timestamps: true
 });
