@@ -10,7 +10,8 @@ const {
   approveSupplier,
   rejectSupplier,
   toggleActive,
-  toggleLock
+  toggleLock,
+  getApprovedSuppliers
   ,
 } = require('../Controllers/Suppliercontroller');
 
@@ -23,11 +24,13 @@ const supplierUpload = upload.fields([
 ]);
 
 router.use(authenticate, authorizeScreen);
-
+router.get('/approved', authenticate, authorizeScreen, getApprovedSuppliers);  // managers
 router.get('/',    getAllSuppliers);
 router.get('/:id', getSupplierById);
 router.post('/',   supplierUpload, createSupplier);
 router.put('/:id', supplierUpload, updateSupplier);
+router.get('/approved', authenticate, authorizeScreen, getApprovedSuppliers);
+
 
 router.patch('/:id/approve',  approveSupplier);
 router.patch('/:id/reject', rejectSupplier);

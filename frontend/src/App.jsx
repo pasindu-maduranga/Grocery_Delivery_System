@@ -1,3 +1,4 @@
+import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { PrivateRoute, PublicRoute, PermissionRoute } from './components/common/Guards'
@@ -11,7 +12,6 @@ import MenusPage from './pages/MenusPage'
 import ScreensPage from './pages/ScreensPage'
 import SuppliersPage from './GrocerysupplierManagment/SuppliersPage'
 import SupplierFormPage from './GrocerysupplierManagment/SupplierFormPage'
-import React from 'react'
 
 export default function App() {
   return (
@@ -63,9 +63,15 @@ export default function App() {
               </PermissionRoute>
             </PrivateRoute>
           } />
+          
           <Route path="/suppliers" element={
-          <PrivateRoute><PermissionRoute screenCode="SCREEN_SUPPLIERS"><SuppliersPage /></PermissionRoute></PrivateRoute>
+          <PrivateRoute>
+            <PermissionRoute screenCode="SCREEN_SUPPLIERS">
+              <SuppliersPage />
+              </PermissionRoute>
+              </PrivateRoute>
         } />
+        
         <Route path="/suppliers/add" element={
           <PrivateRoute><PermissionRoute screenCode="SCREEN_SUPPLIERS_ADD"><SupplierFormPage /></PermissionRoute></PrivateRoute>
         } />

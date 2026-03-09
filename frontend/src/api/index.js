@@ -1,7 +1,7 @@
 import axios from 'axios'
 
-const api = axios.create({ 
-  baseURL: import.meta.env.VITE_API_URL 
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL
 })
 
 api.interceptors.request.use(cfg => {
@@ -13,7 +13,8 @@ api.interceptors.request.use(cfg => {
 api.interceptors.response.use(
   res => res,
   err => {
-    if (err.response?.status === 401) {
+    const isAuthEndpoint = err.config?.url?.includes('/auth/')
+    if (err.response?.status === 401 && !isAuthEndpoint) {
       localStorage.clear()
       window.location.href = '/login'
     }
@@ -23,7 +24,9 @@ api.interceptors.response.use(
 
 export const authAPI = {
   login: (data) => api.post('/auth/login', data),
+  supplierLogin: (data) => api.post('/auth/supplier-login', data),
   me: () => api.get('/auth/me'),
+  supplierMe: () => api.get('/auth/supplier-me'),
   logout: () => api.post('/auth/logout'),
 }
 
@@ -62,16 +65,18 @@ export const modulesAPI = {
   updateScreen: (id, data) => api.put(`/modules/screens/${id}`, data),
   toggleScreen: (id) => api.patch(`/modules/screens/${id}/toggle`),
 }
-export const suppliersAPI = {
-  getAll:        (params) => api.get('/suppliers', { params }),
-  getById:       (id) => api.get(`/suppliers/${id}`),
-  create:        (formData) => api.post('/suppliers', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  update:        (id, formData) => api.put(`/suppliers/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  approve:       (id, data) => api.patch(`/suppliers/${id}/approve`, data),
-  reject:        (id, data) => api.patch(`/suppliers/${id}/reject`, data),
-  toggleActive:  (id) => api.patch(`/suppliers/${id}/toggle-active`),
-  toggleLock:    (id) => api.patch(`/suppliers/${id}/toggle-lock`),
-}
 
+export const suppliersAPI = {
+  getAll: (params) => api.get('/suppliers', { params }),         // superadmin only
+  getApproved: () => api.get('/suppliers/approved'),            // managers
+  getById: (id) => api.get(`/suppliers/${id}`),
+  create: (data) => api.post('/suppliers', data),
+  update: (id, data) => api.put(`/suppliers/${id}`, data),
+  approve: (id, data) => api.patch(`/suppliers/${id}/approve`, data),
+  reject: (id, data) => api.patch(`/suppliers/${id}/reject`, data),
+  toggleActive: (id) => api.patch(`/suppliers/${id}/toggle-active`),
+  toggleLock: (id) => api.patch(`/suppliers/${id}/toggle-lock`),
+  updateRole: (id, data) => api.patch(`/suppliers/${id}/role`, data),
+}
 
 export default api
