@@ -1,5 +1,9 @@
 const path = require('path');
 const authRoutes = require('./authRoutes');
+const paymentRoutes = require('./paymentRoutes');
+const userRoutes = require('./userRoutes');
+const cartRoutes = require('./cartRoutes');
+const healthRouter = require('./healthRoutes');
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const options = {
@@ -12,7 +16,7 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:5003',       
+        url: 'http://localhost:5003',     
         description: 'Development server'
       }
     ],
@@ -42,4 +46,8 @@ console.log('Swagger api-endpoint: http://localhost:5003/api-docs');
 module.exports = (app) => {
     app.use('/api/auth', authRoutes);
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+    app.use('/api/payment', paymentRoutes);
+    app.use('/api/user', userRoutes);
+    app.use('/api/cart', cartRoutes);
+    app.use('/health', healthRouter);
 }

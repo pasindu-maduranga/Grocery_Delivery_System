@@ -2,17 +2,17 @@ const mongoose = require('mongoose');
 const hideSensitiveFields = require('../plugins/userPlugins');
 const deliveryPersonFields = require('./DeliveryPerson');
 const groceryStoreOwnerFields = require('./GroceryStoreOwner');
-const commonUserFields = require('./userCommonSchema');
+const commonUserFields = require('./UserCommonSchema');
 
 const userSchema = new mongoose.Schema({
     //common fields for all users
     ...commonUserFields,
     
     // Delivery person specific fields
-    ...deliveryPersonFields,
+    // ...deliveryPersonFields,
     
     // Grocery Store owner specific fields
-    ...groceryStoreOwnerFields,
+    // ...groceryStoreOwnerFields,
 }, {
     timestamps: true
 });

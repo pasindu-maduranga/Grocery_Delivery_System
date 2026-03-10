@@ -16,6 +16,10 @@ import MyGroceryItemsPage from './InventoryManagment/MyGroceryItemsPage'
 import MySubmissionsPage from './InventoryManagment/MySubmissionsPage'
 import AdminSubmissionsPage from './InventoryManagment/AdminSubmissionsPage'
 import InventoryPage from './InventoryManagment/InventoryPage'
+import PaymentPage from './pages/Payment/PaymentPage'
+import SuccessPage from './pages/Payment/SuccessPage'
+import React from 'react'
+import CancelPage from './pages/Payment/CancelPage'
 
 export default function App() {
   return (
@@ -26,6 +30,15 @@ export default function App() {
         <Route path="/login" element={
           <PublicRoute><LoginPage /></PublicRoute>
         } />
+
+        <Route path="/payment" element={
+          <PublicRoute>
+            <PaymentPage />
+          </PublicRoute>
+        } />
+
+        <Route path="/payment/success" element={<SuccessPage />} />
+        <Route path="/payment/cancel" element={<CancelPage />} />
 
         <Route path="/dashboard" element={
           <PrivateRoute><DashboardPage /></PrivateRoute>
@@ -89,6 +102,8 @@ export default function App() {
         <Route path="/inventory"          element={<PrivateRoute><InventoryPage /></PrivateRoute>} />
 
         <Route path="*" element={<NotFoundPage />} />
+
+        
       </Routes>
     </AuthProvider>
   )
