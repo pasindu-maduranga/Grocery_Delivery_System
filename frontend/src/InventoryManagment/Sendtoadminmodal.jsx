@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { grocerySubmissionsAPI } from '../../api/index'
-import { Modal, FormField, Spinner } from '../common/index'
+import { grocerySubmissionsAPI } from '../api/index'
+import { Modal, FormField, Spinner } from '../components/common/index'
 import { Send, ImageOff, Tag } from 'lucide-react'
 import React from 'react'
 

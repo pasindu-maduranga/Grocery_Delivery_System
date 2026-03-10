@@ -67,8 +67,7 @@ export const modulesAPI = {
 }
 
 export const suppliersAPI = {
-  getAll: (params) => api.get('/suppliers', { params }),         // superadmin only
-  getApproved: () => api.get('/suppliers/approved'),            // managers
+  getAll: (params) => api.get('/suppliers', { params }),
   getById: (id) => api.get(`/suppliers/${id}`),
   create: (data) => api.post('/suppliers', data),
   update: (id, data) => api.put(`/suppliers/${id}`, data),
@@ -77,6 +76,39 @@ export const suppliersAPI = {
   toggleActive: (id) => api.patch(`/suppliers/${id}/toggle-active`),
   toggleLock: (id) => api.patch(`/suppliers/${id}/toggle-lock`),
   updateRole: (id, data) => api.patch(`/suppliers/${id}/role`, data),
+}
+
+export const groceryItemsAPI = {
+  getMy: () => api.get('/grocery-items/my'),
+  getAll: (params) => api.get('/grocery-items', { params }),
+  getById: (id) => api.get(`/grocery-items/${id}`),
+  create: (formData) => api.post('/grocery-items', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  update: (id, formData) => api.put(`/grocery-items/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  delete: (id) => api.delete(`/grocery-items/${id}`),
+}
+
+export const grocerySubmissionsAPI = {
+  getMy: () => api.get('/grocery-submissions/my'),
+  getAll: (params) => api.get('/grocery-submissions', { params }),
+  getById: (id) => api.get(`/grocery-submissions/${id}`),
+  send: (data) => api.post('/grocery-submissions', data),
+  accept: (id, data) => api.patch(`/grocery-submissions/${id}/accept`, data),
+  reject: (id, data) => api.patch(`/grocery-submissions/${id}/reject`, data),
+}
+
+export const inventoryAPI = {
+  getAll: (params) => api.get('/inventory', { params }),
+  getLowStock: () => api.get('/inventory/low-stock'),
+  getById: (id) => api.get(`/inventory/${id}`),
+  updateLevels: (id, data) => api.patch(`/inventory/${id}/levels`, data),
+  sendReorderAlert: (id) => api.post(`/inventory/${id}/reorder-alert`),
+}
+
+export const notificationsAPI = {
+  getAdmin: () => api.get('/notifications/admin'),
+  getSupplier: () => api.get('/notifications/supplier'),
+  markAdminRead: (id) => api.patch(`/notifications/admin/${id}/read`),
+  markSupplierRead: (id) => api.patch(`/notifications/supplier/${id}/read`),
 }
 
 export default api

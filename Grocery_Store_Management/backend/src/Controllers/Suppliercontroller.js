@@ -1,12 +1,12 @@
 const Supplier = require('../Models/Supplier');
 const Role     = require('../Models/Role');
-const { uploadToCloudinary } = require('../Config/cloudinary');
+const { connectCloudinary } = require('../Config/cloudinary');
 const { sendSupplierApprovalEmail, sendSupplierRejectionEmail } = require('../Config/mailer');
 const crypto = require('crypto');
 
 const uploadFileIfExists = async (files, fieldName, folder) => {
   if (files && files[fieldName] && files[fieldName][0]) {
-    return uploadToCloudinary(files[fieldName][0].buffer, folder);
+    return connectCloudinary(files[fieldName][0].buffer, folder);
   }
   return null;
 };

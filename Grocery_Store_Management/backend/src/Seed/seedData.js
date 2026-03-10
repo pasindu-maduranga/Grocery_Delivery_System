@@ -57,6 +57,13 @@ const parentMenus = [
     isSuperAdminOnly: false,
   },
   {
+    name: 'Inventory & Grocery',
+    code: 'INVENTORY_GROCERY',
+    icon: 'shopping-basket',
+    order: 8,
+    isSuperAdminOnly: false,
+  },
+  {
     name: 'Storefront',
     code: 'STOREFRONT',
     icon: 'shopping-cart',
@@ -156,6 +163,22 @@ const menus = [
     parentMenuCode: 'STOREFRONT',
     icon: 'store',
     order: 1,
+  },
+
+  // ── Inventory & Grocery ──
+  {
+    name: 'Grocery Management',
+    code: 'GROCERY_MANAGEMENT',
+    parentMenuCode: 'INVENTORY_GROCERY',
+    icon: 'shopping-basket',
+    order: 1,
+  },
+  {
+    name: 'Inventory Management',
+    code: 'INVENTORY_MANAGEMENT',
+    parentMenuCode: 'INVENTORY_GROCERY',
+    icon: 'package',
+    order: 2,
   },
 
   // ── Payment Logs ──
@@ -337,6 +360,42 @@ const screens = [
     menuCode: 'TRANSACTIONS',
     route: '/transactions',
     description: 'View all payment transaction logs',
+    order: 1,
+  },
+
+  // ── Grocery Management ──
+  {
+    name: 'My Grocery Items',
+    code: 'SCREEN_GROCERY_ITEMS',
+    menuCode: 'GROCERY_MANAGEMENT',
+    route: '/my-grocery-items',
+    description: 'Supplier: manage grocery items and send to admin',
+    order: 1,
+  },
+  {
+    name: 'My Submissions',
+    code: 'SCREEN_MY_SUBMISSIONS',
+    menuCode: 'GROCERY_MANAGEMENT',
+    route: '/my-submissions',
+    description: 'Supplier: track submission history and status',
+    order: 2,
+  },
+  {
+    name: 'Grocery Submissions',
+    code: 'SCREEN_GROCERY_SUBMISSIONS',
+    menuCode: 'GROCERY_MANAGEMENT',
+    route: '/grocery-submissions',
+    description: 'Admin: review, accept or reject supplier submissions',
+    order: 3,
+  },
+
+  // ── Inventory Management ──
+  {
+    name: 'Inventory',
+    code: 'SCREEN_INVENTORY',
+    menuCode: 'INVENTORY_MANAGEMENT',
+    route: '/inventory',
+    description: 'Admin: manage stock levels, set min/max/reorder and alert suppliers',
     order: 1,
   },
 ];

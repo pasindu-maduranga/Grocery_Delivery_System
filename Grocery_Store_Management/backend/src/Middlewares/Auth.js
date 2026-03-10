@@ -9,8 +9,11 @@ const ROUTE_SCREEN_MAP = {
   '/api/parent-menus':       'SCREEN_PARENT_MENUS',
   '/api/menus':              'SCREEN_MENUS',
   '/api/screens':            'SCREEN_SCREENS',
-  '/api/suppliers/verify':   'SCREEN_SUPPLIER_VERIFY',
-  '/api/suppliers':          'SCREEN_SUPPLIERS',
+  '/api/suppliers/verify':        'SCREEN_SUPPLIER_VERIFY',
+  '/api/suppliers':               'SCREEN_SUPPLIERS',
+  '/api/grocery-items':           'SCREEN_GROCERY_ITEMS',
+  '/api/grocery-submissions':     'SCREEN_GROCERY_SUBMISSIONS',
+  '/api/inventory':               'SCREEN_INVENTORY',
   '/api/categories':         'SCREEN_CATEGORIES',
   '/api/tenders':            'SCREEN_TENDERS',
   '/api/bids':               'SCREEN_BIDS',
@@ -21,7 +24,6 @@ const ROUTE_SCREEN_MAP = {
   '/api/inventory/alerts':   'SCREEN_STOCK_ALERTS',
   '/api/storefront':         'SCREEN_STOREFRONT',
   '/api/transactions':       'SCREEN_TRANSACTIONS',
-  '/api/suppliers/approved': 'SCREEN_SUPPLIERS',
 };
 
 const METHOD_PERMISSION_MAP = {
