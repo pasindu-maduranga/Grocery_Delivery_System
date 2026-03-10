@@ -39,4 +39,4 @@ const screenSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Screen', screenSchema);
+module.exports = mongoose.models.Screen || mongoose.model('Screen', screenSchema);

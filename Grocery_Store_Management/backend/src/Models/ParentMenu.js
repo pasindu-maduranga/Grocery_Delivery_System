@@ -35,4 +35,4 @@ const parentMenuSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('ParentMenu', parentMenuSchema);
+module.exports = mongoose.models.ParentMenu || mongoose.model('ParentMenu', parentMenuSchema);

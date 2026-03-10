@@ -12,8 +12,6 @@
  * Safe to re-run anytime — uses upsert so no duplicates
  * ─────────────────────────────────────────────────────────────────
  */
-const dotenv = require('../../src');
-dotenv.config();
 require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');

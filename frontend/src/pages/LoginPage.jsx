@@ -5,22 +5,33 @@ import { ShoppingCart, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import React from 'react'
 
 export default function LoginPage() {
-  const { login } = useAuth()
-  const navigate = useNavigate()
-  const [form, setForm] = useState({ username: '', password: '' })
+  const { login, supplierLogin } = useAuth()
+  const navigate  = useNavigate()
+  const [form, setForm]         = useState({ username: '', password: '' })
   const [showPass, setShowPass] = useState(false)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [error, setError]       = useState('')
+  const [loading, setLoading]   = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      await login(form.username, form.password)
-      navigate('/dashboard')
-    } catch (err) {
-      setError(err.response?.data?.message || 'Login failed')
+      // Try system user login first
+      const res = await login(form.username, form.password)
+      if (res.userType === 'supplier') {
+        navigate('/dashboard')
+      } else {
+        navigate('/dashboard')
+      }
+    } catch {
+      // Fall back to supplier login
+      try {
+        await supplierLogin(form.username, form.password)
+        navigate('/dashboard')
+      } catch (supplierErr) {
+        setError(supplierErr.response?.data?.message || 'Invalid credentials')
+      }
     } finally {
       setLoading(false)
     }
@@ -28,7 +39,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 flex">
-      {/* Left Panel */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 bg-gradient-to-br from-slate-900 via-primary-950 to-slate-950 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-20 w-72 h-72 bg-primary-500 rounded-full blur-3xl" />
@@ -59,7 +69,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right Panel */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-3 mb-10">

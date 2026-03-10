@@ -67,4 +67,4 @@ systemUserSchema.virtual('fullName').get(function () {
   return `${this.firstName} ${this.lastName}`;
 });
 
-module.exports = mongoose.model('SystemUser', systemUserSchema);
+module.exports = mongoose.models.SystemUser || mongoose.model('SystemUser', systemUserSchema);

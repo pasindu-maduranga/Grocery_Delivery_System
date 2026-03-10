@@ -16,11 +16,11 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-const ParentMenu = require('./models/ParentMenu');
-const Menu = require('./models/Menu');
-const Screen = require('./models/Screen');
-const Role = require('./models/Role');
-const SystemUser = require('./models/SystemUser');
+const ParentMenu = require('./Models/ParentMenu');
+const Menu = require('./Models/Menu');
+const Screen = require('./Models/Screen');
+const Role = require('./Models/Role');
+const SystemUser = require('./Models/SystemUser');
 const { parentMenus, menus, screens } = require('./seedData');
 
 const seed = async () => {

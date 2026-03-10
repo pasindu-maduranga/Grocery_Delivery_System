@@ -1,7 +1,7 @@
 import axios from 'axios'
 
-const api = axios.create({ 
-  baseURL: import.meta.env.VITE_API_URL 
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL
 })
 
 api.interceptors.request.use(cfg => {
@@ -13,7 +13,8 @@ api.interceptors.request.use(cfg => {
 api.interceptors.response.use(
   res => res,
   err => {
-    if (err.response?.status === 401) {
+    const isAuthEndpoint = err.config?.url?.includes('/auth/')
+    if (err.response?.status === 401 && !isAuthEndpoint) {
       localStorage.clear()
       window.location.href = '/login'
     }
@@ -23,7 +24,9 @@ api.interceptors.response.use(
 
 export const authAPI = {
   login: (data) => api.post('/auth/login', data),
+  supplierLogin: (data) => api.post('/auth/supplier-login', data),
   me: () => api.get('/auth/me'),
+  supplierMe: () => api.get('/auth/supplier-me'),
   logout: () => api.post('/auth/logout'),
 }
 
@@ -61,6 +64,51 @@ export const modulesAPI = {
   createScreen: (data) => api.post('/modules/screens', data),
   updateScreen: (id, data) => api.put(`/modules/screens/${id}`, data),
   toggleScreen: (id) => api.patch(`/modules/screens/${id}/toggle`),
+}
+
+export const suppliersAPI = {
+  getAll: (params) => api.get('/suppliers', { params }),
+  getById: (id) => api.get(`/suppliers/${id}`),
+  create: (data) => api.post('/suppliers', data),
+  update: (id, data) => api.put(`/suppliers/${id}`, data),
+  approve: (id, data) => api.patch(`/suppliers/${id}/approve`, data),
+  reject: (id, data) => api.patch(`/suppliers/${id}/reject`, data),
+  toggleActive: (id) => api.patch(`/suppliers/${id}/toggle-active`),
+  toggleLock: (id) => api.patch(`/suppliers/${id}/toggle-lock`),
+  updateRole: (id, data) => api.patch(`/suppliers/${id}/role`, data),
+}
+
+export const groceryItemsAPI = {
+  getMy: () => api.get('/grocery-items/my'),
+  getAll: (params) => api.get('/grocery-items', { params }),
+  getById: (id) => api.get(`/grocery-items/${id}`),
+  create: (formData) => api.post('/grocery-items', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  update: (id, formData) => api.put(`/grocery-items/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  delete: (id) => api.delete(`/grocery-items/${id}`),
+}
+
+export const grocerySubmissionsAPI = {
+  getMy: () => api.get('/grocery-submissions/my'),
+  getAll: (params) => api.get('/grocery-submissions', { params }),
+  getById: (id) => api.get(`/grocery-submissions/${id}`),
+  send: (data) => api.post('/grocery-submissions', data),
+  accept: (id, data) => api.patch(`/grocery-submissions/${id}/accept`, data),
+  reject: (id, data) => api.patch(`/grocery-submissions/${id}/reject`, data),
+}
+
+export const inventoryAPI = {
+  getAll: (params) => api.get('/inventory', { params }),
+  getLowStock: () => api.get('/inventory/low-stock'),
+  getById: (id) => api.get(`/inventory/${id}`),
+  updateLevels: (id, data) => api.patch(`/inventory/${id}/levels`, data),
+  sendReorderAlert: (id) => api.post(`/inventory/${id}/reorder-alert`),
+}
+
+export const notificationsAPI = {
+  getAdmin: () => api.get('/notifications/admin'),
+  getSupplier: () => api.get('/notifications/supplier'),
+  markAdminRead: (id) => api.patch(`/notifications/admin/${id}/read`),
+  markSupplierRead: (id) => api.patch(`/notifications/supplier/${id}/read`),
 }
 
 export default api
