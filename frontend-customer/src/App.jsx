@@ -4,7 +4,7 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-import Dashboard from "./pages/Dashboard";
+import CustomerShopPage from "./pages/CustomerShopPage";
 import Cart from "./pages/Cart";
 import UserProfile from "./pages/UserProfile";
 import Orders from "./pages/Orders";
@@ -23,7 +23,7 @@ function App() {
         <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* App */}
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={<CustomerShopPage />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/orders" element={<Orders />} />
@@ -33,7 +33,7 @@ function App() {
         <Route path="/payment/cancel" element={<PaymentCancel />} />
 
         {/* Default */}
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/" element={<CustomerShopPage />} />
       </Routes>
     </BrowserRouter>
   );

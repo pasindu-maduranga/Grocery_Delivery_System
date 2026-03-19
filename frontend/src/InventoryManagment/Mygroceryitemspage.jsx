@@ -1,10 +1,16 @@
 import { useState, useEffect } from 'react'
 import { groceryItemsAPI } from '../api/index'
 import Layout from '../components/layout/Layout'
-import { Table, Badge, PageLoader, Spinner, Modal, FormField, ConfirmModal } from '../components/common/index'
-import { Plus, Pencil, Trash2, Send, Package, ImageOff } from 'lucide-react'
+import { Modal, FormField, Spinner, EmptyState } from '../components/common/index'
+import { 
+  Plus, Pencil, Trash2, Send, Package, ImageOff, 
+  Search, Filter, IndianRupee, Layers, 
+  ChevronRight, Info, AlertCircle, CheckCircle2,
+  Image as ImageIcon
+} from 'lucide-react'
 import React from 'react'
 import SendToAdminModal from '../InventoryManagment/Sendtoadminmodal'
+import { Toaster, toast } from 'sonner'
 
 const GROCERY_TYPES = [
   'Produce', 'Dairy', 'Meat & Seafood', 'Bakery',
@@ -13,31 +19,23 @@ const GROCERY_TYPES = [
   'Health & Personal Care', 'Baby & Kids'
 ]
 
-const TYPE_COLORS = {
-  'Produce': 'bg-green-100 text-green-700',
-  'Dairy': 'bg-blue-100 text-blue-700',
-  'Meat & Seafood': 'bg-red-100 text-red-700',
-  'Bakery': 'bg-amber-100 text-amber-700',
-  'Pantry / Dry Goods': 'bg-stone-100 text-stone-700',
-  'Beverages': 'bg-cyan-100 text-cyan-700',
-  'Frozen Foods': 'bg-indigo-100 text-indigo-700',
-  'Snacks': 'bg-orange-100 text-orange-700',
-  'Herbs & Spices': 'bg-lime-100 text-lime-700',
-  'Household & Cleaning': 'bg-purple-100 text-purple-700',
-  'Health & Personal Care': 'bg-pink-100 text-pink-700',
-  'Baby & Kids': 'bg-rose-100 text-rose-700',
+const emptyForm = { 
+  name: '', groceryType: '', availableQuantity: '', 
+  measuringUnit: 'kg', unitPrice: '', description: '', image: null 
 }
-
-const emptyForm = { name: '', groceryType: '', availableQuantity: '', measuringUnit: '', unitPrice: '', description: '', image: null }
 
 export default function MyGroceryItemsPage() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeFilter, setActiveFilter] = useState('All')
+  
   const [modal, setModal] = useState({ open: false, item: null })
   const [form, setForm] = useState(emptyForm)
   const [imagePreview, setImagePreview] = useState(null)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+  const [errors, setErrors] = useState({})
+  
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, item: null })
   const [deleting, setDeleting] = useState(false)
   const [sendModal, setSendModal] = useState({ open: false, item: null })
@@ -49,54 +47,55 @@ export default function MyGroceryItemsPage() {
     try {
       const res = await groceryItemsAPI.getMy()
       setItems(res.data.data)
+    } catch (err) {
+      toast.error('Failed to load items')
     } finally { setLoading(false) }
   }
 
-  const openAdd = () => {
-    setForm(emptyForm)
-    setImagePreview(null)
-    setError('')
-    setModal({ open: true, item: null })
-  }
-
-  const openEdit = (item) => {
-    setForm({
-      name: item.name,
-      groceryType: item.groceryType,
-      availableQuantity: item.availableQuantity,
-      measuringUnit: item.measuringUnit,
-      unitPrice: item.unitPrice,
-      description: item.description || '',
-      image: null,
-    })
-    setImagePreview(item.image || null)
-    setError('')
-    setModal({ open: true, item })
+  const validate = () => {
+    const e = {}
+    if (!form.name.trim()) e.name = 'Name is required'
+    if (!form.groceryType) e.groceryType = 'Category is required'
+    if (!form.unitPrice || form.unitPrice <= 0) e.unitPrice = 'Valid price required'
+    if (!form.availableQuantity || form.availableQuantity < 0) e.availableQuantity = 'Valid quantity required'
+    setErrors(e)
+    return Object.keys(e).length === 0
   }
 
   const handleImageChange = (e) => {
     const file = e.target.files[0]
     if (!file) return
+    if (file.size > 2 * 1024 * 1024) return toast.error('Image must be under 2MB')
+    
     setForm(p => ({ ...p, image: file }))
     setImagePreview(URL.createObjectURL(file))
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!validate()) return
+    
     setSaving(true)
-    setError('')
     try {
       const fd = new FormData()
-      Object.entries(form).forEach(([k, v]) => { if (v !== null && v !== '') fd.append(k, v) })
+      Object.entries(form).forEach(([k, v]) => {
+        if (v !== null && v !== '') fd.append(k, v)
+      })
+
       if (modal.item) {
         await groceryItemsAPI.update(modal.item._id, fd)
+        toast.success('Item updated successfully')
       } else {
         await groceryItemsAPI.create(fd)
+        toast.success('New item added to catalog')
       }
+      
       setModal({ open: false, item: null })
+      setForm(emptyForm)
+      setImagePreview(null)
       load()
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save')
+      toast.error(err.response?.data?.message || 'Failed to save item')
     } finally { setSaving(false) }
   }
 
@@ -104,68 +103,213 @@ export default function MyGroceryItemsPage() {
     setDeleting(true)
     try {
       await groceryItemsAPI.delete(deleteConfirm.item._id)
+      toast.success('Item removed from catalog')
       setDeleteConfirm({ open: false, item: null })
       load()
+    } catch (err) {
+      toast.error('Could not delete item')
     } finally { setDeleting(false) }
   }
 
-  if (loading) return <Layout title="My Grocery Items"><PageLoader /></Layout>
+  const filteredItems = items.filter(it => {
+    const matchesSearch = it.name.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesFilter = activeFilter === 'All' || it.groceryType === activeFilter
+    return matchesSearch && matchesFilter
+  })
 
   return (
-    <Layout title="My Grocery Items" subtitle="Manage your grocery inventory">
-      <div className="card">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h3 className="font-semibold text-slate-800">Grocery Items</h3>
-            <p className="text-xs text-slate-400 mt-0.5">{items.length} items listed</p>
+    <Layout title="My Catalog" subtitle="Manage and supply your grocery items">
+      <Toaster position="top-right" richColors />
+      
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
+        
+        {/* Analytics Header / Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="stat-card border-none bg-emerald-900 text-white overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+              <Package size={80} />
+            </div>
+            <div className="relative z-10">
+              <p className="text-emerald-300 text-[10px] font-bold uppercase tracking-widest mb-1">Total Items</p>
+              <h3 className="text-3xl font-black">{items.length}</h3>
+              <p className="text-[10px] text-emerald-400 mt-2 flex items-center gap-1 font-medium italic">
+                <CheckCircle2 size={12} /> Active in catalog
+              </p>
+            </div>
           </div>
-          <button onClick={openAdd} className="btn-primary">
-            <Plus size={16} /> Add Item
-          </button>
+
+          <div className="stat-card border-none bg-white shadow-sm ring-1 ring-slate-100">
+            <p className="label text-slate-400">Total Value</p>
+            <div className="flex items-end gap-2">
+              <h3 className="text-2xl font-bold text-slate-800">
+                {items.reduce((acc, it) => acc + (it.unitPrice * it.availableQuantity), 0).toLocaleString()}
+              </h3>
+              <span className="text-xs font-bold text-emerald-600 pb-1">LKR</span>
+            </div>
+            <div className="w-full bg-slate-50 h-1.5 rounded-full mt-4 overflow-hidden">
+              <div className="bg-emerald-500 h-full w-[65%] rounded-full shadow-[0_0_8px_rgba(34,197,94,0.4)]"></div>
+            </div>
+          </div>
+
+          <div className="stat-card border-none bg-white shadow-sm ring-1 ring-slate-100">
+            <p className="label text-slate-400">Low Stock</p>
+            <h3 className="text-2xl font-bold text-slate-800">
+              {items.filter(it => it.availableQuantity < 10).length}
+            </h3>
+            <p className="text-[10px] text-amber-600 mt-2 flex items-center gap-1 font-bold">
+              <AlertCircle size={12} /> Requires attention
+            </p>
+          </div>
+
+          <div className="stat-card border-none bg-white shadow-sm ring-1 ring-slate-100 flex flex-col justify-center">
+            <button 
+              onClick={() => { setForm(emptyForm); setModal({ open: true, item: null }); setImagePreview(null); }}
+              className="w-full h-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl flex items-center justify-center gap-2 group transition-all"
+            >
+              <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-emerald-500/20">
+                <Plus size={18} />
+              </div>
+              <span className="text-sm font-bold text-emerald-700">New Item</span>
+            </button>
+          </div>
         </div>
 
-        {items.length === 0 ? (
-          <div className="py-20 flex flex-col items-center gap-3 text-slate-400">
-            <Package size={48} className="text-slate-200" />
-            <p className="text-sm font-medium">No grocery items yet</p>
-            <p className="text-xs">Add your first item to start sending to admin</p>
+        {/* Toolbar */}
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-8 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+          <div className="relative group w-full md:w-96">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={18} />
+            <input 
+              type="text" 
+              placeholder="Search by product name..." 
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="input pl-11 bg-slate-50 border-transparent focus:bg-white h-11"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto no-scrollbar pb-1 md:pb-0">
+             <div className="flex bg-slate-100 p-1 rounded-xl whitespace-nowrap">
+                {['All', ...new Set(items.map(it => it.groceryType))].slice(0, 5).map(cat => (
+                  <button 
+                    key={cat}
+                    onClick={() => setActiveFilter(cat)}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                      activeFilter === cat ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+             </div>
+             <button className="p-2.5 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-colors">
+               <Filter size={18} />
+             </button>
+          </div>
+        </div>
+
+        {/* Grid Display */}
+        {loading ? (
+          <div className="py-24 flex flex-col items-center justify-center gap-4">
+             <div className="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+             <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Synchronizing Catalog...</p>
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="card py-20 bg-white/50 border-dashed border-2 flex flex-col items-center">
+            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+               <Package size={40} className="text-slate-300" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800">No products match your criteria</h3>
+            <p className="text-sm text-slate-500 mt-1">Try adjusting your search or filters.</p>
+            <button 
+              onClick={() => { setSearchQuery(''); setActiveFilter('All'); }}
+              className="mt-6 text-emerald-600 font-bold text-sm hover:underline"
+            >
+              Clear all filters
+            </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-6">
-            {items.map(item => (
-              <div key={item._id} className="border border-slate-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow bg-white">
-                <div className="h-40 bg-slate-50 flex items-center justify-center relative overflow-hidden">
-                  {item.image
-                    ? <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                    : <ImageOff size={36} className="text-slate-300" />
-                  }
-                  <div className="absolute top-2 left-2">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${TYPE_COLORS[item.groceryType] || 'bg-slate-100 text-slate-600'}`}>
-                      {item.groceryType}
-                    </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
+            {filteredItems.map(item => (
+              <div 
+                key={item._id} 
+                className="card group hover:shadow-2xl hover:shadow-emerald-900/5 hover:-translate-y-1.5 transition-all duration-500 overflow-visible bg-white h-full flex flex-col"
+              >
+                <div className="relative h-52 bg-slate-50 flex-shrink-0 rounded-t-2xl overflow-hidden">
+                  {item.image ? (
+                    <img 
+                      src={item.image} 
+                      alt={item.name} 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-200">
+                      <ImageIcon size={48} strokeWidth={1} />
+                    </div>
+                  )}
+                  
+                  {/* Category Badge - Professional Style */}
+                  <div className="absolute top-4 left-4">
+                    <div className="bg-emerald-900/90 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 shadow-xl">
+                      <p className="text-[10px] font-black text-emerald-400 uppercase tracking-tight">{item.groceryType}</p>
+                    </div>
+                  </div>
+
+                  {/* Edit/Delete Floating Bar */}
+                  <div className="absolute top-4 right-4 flex flex-col gap-2 translate-x-12 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
+                     <button 
+                        onClick={() => { setForm(emptyForm); setModal({ open: true, item }); setImagePreview(item.image); }}
+                        className="w-10 h-10 bg-white shadow-xl rounded-xl flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-colors"
+                     >
+                       <Pencil size={16} />
+                     </button>
+                     <button 
+                        onClick={() => setDeleteConfirm({ open: true, item })}
+                        className="w-10 h-10 bg-white shadow-xl rounded-xl flex items-center justify-center text-red-600 hover:bg-red-50 transition-colors"
+                     >
+                       <Trash2 size={16} />
+                     </button>
+                  </div>
+
+                  {/* Hover Supply Overlay */}
+                  <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out">
+                    <button 
+                      onClick={() => setSendModal({ open: true, item })}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-xl shadow-emerald-900/20 flex items-center justify-center gap-2 group/btn transition-all"
+                    >
+                      <Send size={14} className="group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" />
+                      Supply to Admin
+                    </button>
                   </div>
                 </div>
-                <div className="p-4">
-                  <h4 className="font-semibold text-slate-800 text-sm truncate">{item.name}</h4>
-                  <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-                    <span className="font-medium text-emerald-600 text-sm">${item.unitPrice}/{item.measuringUnit}</span>
-                    <span className={`font-medium ${item.availableQuantity <= 10 ? 'text-red-500' : 'text-slate-600'}`}>
-                      {item.availableQuantity} {item.measuringUnit} avail.
+
+                <div className="p-6 flex-1 flex flex-col">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h4 className="text-base font-bold text-slate-800 line-clamp-1 flex-1 leading-tight group-hover:text-emerald-700 transition-colors">
+                      {item.name}
+                    </h4>
+                    <span className="text-[10px] bg-slate-100 text-slate-500 font-black px-2 py-0.5 rounded uppercase tracking-tighter">
+                      {item.measuringUnit}
                     </span>
                   </div>
-                  {item.description && (
-                    <p className="mt-1.5 text-xs text-slate-400 line-clamp-2">{item.description}</p>
-                  )}
-                  <div className="mt-3 flex items-center gap-1 border-t border-slate-100 pt-3">
-                    <button onClick={() => setSendModal({ open: true, item })} className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors">
-                      <Send size={12} /> Send to Admin
-                    </button>
-                    <button onClick={() => openEdit(item)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500">
-                      <Pencil size={13} />
-                    </button>
-                    <button onClick={() => setDeleteConfirm({ open: true, item })} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-red-400">
-                      <Trash2 size={13} />
-                    </button>
+
+                  <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed h-8 mb-6">
+                    {item.description || "No description available for this catalog item."}
+                  </p>
+
+                  <div className="mt-auto grid grid-cols-2 pt-6 border-t border-slate-50 gap-4">
+                    <div>
+                      <p className="text-[10px] uppercase font-black text-slate-300 tracking-widest mb-1">Unit Price</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-xs font-bold text-emerald-900 leading-none">LKR</span>
+                        <span className="text-xl font-black text-emerald-900 leading-none tracking-tight">{item.unitPrice}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] uppercase font-black text-slate-300 tracking-widest mb-1">Stock</p>
+                      <p className={`text-base font-black ${item.availableQuantity < 10 ? 'text-amber-600' : 'text-slate-800'}`}>
+                        {item.availableQuantity}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -174,70 +318,176 @@ export default function MyGroceryItemsPage() {
         )}
       </div>
 
-      <Modal open={modal.open} onClose={() => setModal({ open: false, item: null })}
-        title={modal.item ? 'Edit Grocery Item' : 'Add Grocery Item'} size="md">
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && <p className="text-sm text-red-500 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</p>}
+      {/* Modern High-End Modal for Adding/Editing */}
+      <Modal 
+        open={modal.open} 
+        onClose={() => setModal({ open: false, item: null })}
+        title={modal.item ? "Update Product Details" : "Register New Product"}
+        size="lg"
+      >
+        <form onSubmit={handleSubmit} className="flex flex-col md:flex-row min-h-[500px]">
+          {/* Left Preview Section */}
+          <div className="w-full md:w-[320px] bg-emerald-950 p-8 flex flex-col gap-6 text-white relative overflow-hidden">
+             <div className="absolute top-[-10%] left-[-10%] w-48 h-48 bg-emerald-500/20 rounded-full blur-[80px]"></div>
+             
+             <div className="relative z-10">
+                <h4 className="text-xs font-black text-emerald-400 uppercase tracking-[0.2em] mb-4">Live Preview</h4>
+                <div className="aspect-square w-full rounded-2xl bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center group/img relative">
+                  {imagePreview ? (
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <ImageIcon size={48} className="text-white/20" />
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                    <label className="cursor-pointer bg-white text-emerald-900 px-4 py-2 rounded-xl text-xs font-black uppercase hover:scale-105 transition-transform">
+                      Change Media
+                      <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+                    </label>
+                  </div>
+                </div>
+                {form.name && (
+                   <div className="mt-4">
+                      <p className="text-lg font-bold truncate">{form.name}</p>
+                      <p className="text-xs text-emerald-400/80 font-medium">LKR {form.unitPrice || '0.00'}/{form.measuringUnit}</p>
+                   </div>
+                )}
+             </div>
 
-          <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden bg-slate-50 flex-shrink-0">
-              {imagePreview
-                ? <img src={imagePreview} alt="" className="w-full h-full object-cover rounded-xl" />
-                : <ImageOff size={24} className="text-slate-300" />
-              }
-            </div>
-            <div className="flex-1">
-              <label className="block text-xs font-medium text-slate-600 mb-1">Item Image</label>
-              <input type="file" accept="image/*" onChange={handleImageChange}
-                className="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
-            </div>
+             <div className="mt-auto relative z-10 pt-8 border-t border-white/5">
+                <div className="flex items-center gap-3 text-emerald-300">
+                   <Info size={16} />
+                   <p className="text-[10px] font-bold uppercase leading-tight tracking-wide">
+                     Fill all required fields to register the item in the central inventory.
+                   </p>
+                </div>
+             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="Item Name" className="col-span-2">
-              <input className="input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required placeholder="e.g. Fresh Tomatoes" />
-            </FormField>
-            <FormField label="Grocery Type">
-              <select className="input" value={form.groceryType} onChange={e => setForm(p => ({ ...p, groceryType: e.target.value }))} required>
-                <option value="">— Select Type —</option>
-                {GROCERY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </FormField>
-            <FormField label="Measuring Unit">
-              <input className="input" value={form.measuringUnit} onChange={e => setForm(p => ({ ...p, measuringUnit: e.target.value }))} required placeholder="kg, litre, piece..." />
-            </FormField>
-            <FormField label="Available Quantity">
-              <input className="input" type="number" min="0" step="0.01" value={form.availableQuantity}
-                onChange={e => setForm(p => ({ ...p, availableQuantity: e.target.value }))} required />
-            </FormField>
-            <FormField label="Unit Price ($)">
-              <input className="input" type="number" min="0" step="0.01" value={form.unitPrice}
-                onChange={e => setForm(p => ({ ...p, unitPrice: e.target.value }))} required />
-            </FormField>
-          </div>
+          {/* Right Input Section */}
+          <div className="flex-1 p-8 md:p-10 bg-white overflow-y-auto max-h-[600px] no-scrollbar">
+             <div className="grid grid-cols-2 gap-5">
+                <div className="col-span-2">
+                   <FormField label="Product Performance Name" error={errors.name}>
+                      <input 
+                         className="input h-12 shadow-sm"
+                         value={form.name} 
+                         onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                         placeholder="e.g. Premium Basmati Rice"
+                      />
+                   </FormField>
+                </div>
 
-          <FormField label="Description (optional)">
-            <textarea className="input h-20 resize-none" value={form.description}
-              onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-              placeholder="Brief description of the item..." />
-          </FormField>
+                <FormField label="Category" error={errors.groceryType}>
+                  <select 
+                    className="input h-12 shadow-sm"
+                    value={form.groceryType} 
+                    onChange={e => setForm(p => ({ ...p, groceryType: e.target.value }))}
+                  >
+                    <option value="">Select Type</option>
+                    {GROCERY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </FormField>
 
-          <div className="flex gap-3 justify-end pt-2 border-t border-slate-100">
-            <button type="button" onClick={() => setModal({ open: false, item: null })} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary">
-              {saving && <Spinner size="sm" />} {modal.item ? 'Update Item' : 'Add Item'}
-            </button>
+                <FormField label="Base Unit">
+                  <select 
+                    className="input h-12 shadow-sm font-bold text-slate-700"
+                    value={form.measuringUnit} 
+                    onChange={e => setForm(p => ({ ...p, measuringUnit: e.target.value }))}
+                  >
+                    <option value="kg">Kilograms (kg)</option>
+                    <option value="g">Grams (g)</option>
+                    <option value="pcs">Pieces (pcs)</option>
+                    <option value="packet">Packet</option>
+                    <option value="liter">Liter (L)</option>
+                  </select>
+                </FormField>
+
+                <FormField label="Unit Price (LKR)" error={errors.unitPrice}>
+                  <input 
+                    type="number" className="input h-12 shadow-sm font-bold text-emerald-700"
+                    value={form.unitPrice} 
+                    onChange={e => setForm(p => ({ ...p, unitPrice: e.target.value }))}
+                    placeholder="0.00"
+                  />
+                </FormField>
+
+                <FormField label="Current Stock" error={errors.availableQuantity}>
+                  <input 
+                    type="number" className="input h-12 shadow-sm"
+                    value={form.availableQuantity} 
+                    onChange={e => setForm(p => ({ ...p, availableQuantity: e.target.value }))}
+                    placeholder="0"
+                  />
+                </FormField>
+
+                <div className="col-span-2">
+                  <FormField label="Description & Notes">
+                    <textarea 
+                      className="input min-h-[100px] py-4 leading-relaxed"
+                      value={form.description} 
+                      onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+                      placeholder="Describe freshness, origin, or variety..."
+                    />
+                  </FormField>
+                </div>
+             </div>
+
+             <div className="flex gap-4 pt-10 mt-6 border-t border-slate-50">
+                <button 
+                  type="button" 
+                  onClick={() => setModal({ open: false, item: null })}
+                  className="btn-secondary flex-1 h-12 rounded-2xl"
+                >
+                  Discard
+                </button>
+                <button 
+                  disabled={saving}
+                  type="submit" 
+                  className="btn-primary flex-1 h-12 rounded-2xl shadow-emerald-900/10"
+                >
+                  {saving ? <Spinner size="sm" /> : modal.item ? 'Save Changes' : 'Confirm Registration'}
+                </button>
+             </div>
           </div>
         </form>
       </Modal>
 
-      <ConfirmModal
-        open={deleteConfirm.open} onClose={() => setDeleteConfirm({ open: false, item: null })}
-        onConfirm={handleDelete} loading={deleting}
-        title={`Delete "${deleteConfirm.item?.name}"?`}
-        message="This item will be permanently deleted. This cannot be undone."
-      />
+      {/* Enhanced Confirm Delete Modal */}
+      <Modal
+        open={deleteConfirm.open}
+        onClose={() => setDeleteConfirm({ open: false, item: null })}
+        title="Confirm Deletion"
+        size="sm"
+      >
+        <div className="p-8 text-center">
+           <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
+             <Trash2 size={28} />
+           </div>
+           <h3 className="text-lg font-bold text-slate-800">Remove Item?</h3>
+           <p className="text-sm text-slate-500 mt-2">
+             Are you sure you want to remove <span className="font-bold text-slate-700">"{deleteConfirm.item?.name}"</span>? 
+             This action cannot be undone and will remove it from the catalog.
+           </p>
+           
+           <div className="flex flex-col gap-3 mt-8">
+              <button 
+                onClick={handleDelete}
+                disabled={deleting}
+                className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-red-500/10 flex items-center justify-center gap-2"
+              >
+                {deleting && <Spinner size="sm" />} Yes, Delete Item
+              </button>
+              <button 
+                onClick={() => setDeleteConfirm({ open: false, item: null })}
+                className="w-full h-12 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl transition-all"
+              >
+                Keep Item
+              </button>
+           </div>
+        </div>
+      </Modal>
 
+      {/* Supply Interaction Modal */}
       {sendModal.open && (
         <SendToAdminModal
           item={sendModal.item}
@@ -247,4 +497,4 @@ export default function MyGroceryItemsPage() {
       )}
     </Layout>
   )
-}
+}

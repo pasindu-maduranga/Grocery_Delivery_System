@@ -13,6 +13,8 @@ const groceryItemRoutes = require('./Routes/groceryItems');
 const grocerySubmissionRoutes = require('./Routes/grocerySubmissions');
 const inventoryRoutes = require('./Routes/inventory');
 const notificationRoutes = require('./Routes/notifications');
+const paymentRoutes = require('./Routes/payments');
+const storefrontRoutes = require('./Routes/storefront');
 
 const app = express();
 
@@ -29,6 +31,9 @@ app.use('/api/grocery-items', groceryItemRoutes);
 app.use('/api/grocery-submissions', grocerySubmissionRoutes);
 app.use('/api/inventory',inventoryRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/storefront', storefrontRoutes);
+
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.use((req, res) => res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` }));

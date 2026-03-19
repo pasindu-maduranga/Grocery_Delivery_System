@@ -28,6 +28,7 @@ export const authAPI = {
   me: () => api.get('/auth/me'),
   supplierMe: () => api.get('/auth/supplier-me'),
   logout: () => api.post('/auth/logout'),
+  updateSupplierProfile: (data) => api.put('/auth/supplier-profile', data),
 }
 
 export const rolesAPI = {
@@ -111,4 +112,19 @@ export const notificationsAPI = {
   markSupplierRead: (id) => api.patch(`/notifications/supplier/${id}/read`),
 }
 
-export default api
+export const paymentsAPI = {
+  createPaymentIntent: (data) => api.post('/payments/create-payment-intent', data),
+  confirmPayment: (data) => api.post('/payments/confirm', data),
+  syncToStorefront: (data) => api.post('/payments/sync-to-storefront', data),
+  getAllTransactions: (params) => api.get('/payments/transactions', { params }),
+  getMyTransactions: () => api.get('/payments/my-transactions'),
+  getAnalytics: (params) => api.get('/payments/analytics', { params }),
+  getSupplierAnalytics: () => api.get('/payments/supplier-analytics'),
+}
+
+export const storefrontAPI = {
+  getAll: (params) => api.get('/storefront', { params }),
+  getById: (id) => api.get(`/storefront/${id}`),
+}
+
+export default api
