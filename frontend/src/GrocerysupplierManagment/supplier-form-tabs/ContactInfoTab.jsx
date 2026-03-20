@@ -1,5 +1,5 @@
 import React from 'react'
-import { Field, Input } from './shared'
+import { Field, Input } from './Shared'
 
 export default function ContactInfoTab({ form, setField, isEdit }) {
   return (

@@ -1,5 +1,5 @@
 import React from 'react'
-import { FileUpload } from './shared'
+import { FileUpload } from './Shared'
 
 export default function DocumentsTab({ files, previews, handleFile, clearFile }) {
   return (

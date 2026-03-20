@@ -1,5 +1,5 @@
 import React from 'react'
-import { Field, Input, FileUpload } from './shared'
+import { Field, Input, FileUpload } from './Shared'
 
 export default function BusinessInfoTab({ form, setField, files, previews, handleFile, clearFile }) {
   return (

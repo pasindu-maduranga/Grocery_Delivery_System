@@ -1,5 +1,5 @@
 import React from 'react'
-import { Field, Input } from './shared'
+import { Field, Input } from './Shared'
 
 const PAYMENT_METHODS = [
   { value: 'bank_transfer',   label: 'Bank Transfer',    desc: 'Direct bank-to-bank payment' },

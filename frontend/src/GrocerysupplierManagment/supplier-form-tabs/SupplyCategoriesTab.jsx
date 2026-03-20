@@ -1,6 +1,6 @@
 import React from 'react'
 import { Plus, Trash2 } from 'lucide-react'
-import { Select, Input } from './shared'
+import { Select, Input } from './Shared'
 
 const SUPPLY_CATEGORIES = [
   'Fruits','Vegetables','Dairy','Bakery','Meat','Beverages',
