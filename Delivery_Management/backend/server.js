@@ -24,7 +24,7 @@ app.get('/', (req, res) => {
 
 // Start Server
 const PORT = process.env.PORT || 5000;
-if (require.main === module) {
+if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`Delivery Service running on port ${PORT}`);
   });

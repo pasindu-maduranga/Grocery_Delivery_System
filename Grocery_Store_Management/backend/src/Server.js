@@ -60,7 +60,7 @@ connectCloudinary();
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('✅ MongoDB connected');
-    if (require.main === module) {
+    if (!process.env.VERCEL) {
       app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
     }
   })

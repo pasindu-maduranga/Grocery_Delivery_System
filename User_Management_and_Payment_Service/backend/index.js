@@ -26,7 +26,7 @@ app.use(passport.session());
 routes(app);
 
 const PORT = process.env.PORT || 5003
-if (require.main === module) {
+if (!process.env.VERCEL) {
     app.listen(PORT,() => {
         console.log(`Listening on PORT ${PORT} : http://localhost:${PORT}`);
     });
