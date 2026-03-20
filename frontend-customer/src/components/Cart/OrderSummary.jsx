@@ -13,13 +13,13 @@ const OrderSummary = ({
       <div className="space-y-3 text-sm">
         <div className="flex justify-between text-gray-600">
           <span>Subtotal ({cartCount} items)</span>
-          <span>${subtotal.toFixed(2)}</span>
+          <span>LKR {subtotal.toFixed(2)}</span>
         </div>
 
         {discount > 0 && (
           <div className="flex justify-between text-green-600">
             <span>Discount ({discount}% — {couponCode})</span>
-            <span>-${discountAmt.toFixed(2)}</span>
+            <span>-LKR {discountAmt.toFixed(2)}</span>
           </div>
         )}
 
@@ -28,14 +28,14 @@ const OrderSummary = ({
           <span>
             {deliveryFee === 0
               ? <span className="text-green-600 font-medium">FREE</span>
-              : `$${deliveryFee}`
+              : `LKR ${deliveryFee.toFixed(2)}`
             }
           </span>
         </div>
 
         {deliveryFee > 0 && (
           <p className="text-xs text-orange-500 bg-orange-50 px-3 py-1.5 rounded-lg">
-            Add ${(30 - subtotal).toFixed(2)} more for FREE delivery!
+            Add LKR {(3000 - subtotal).toFixed(2)} more for FREE delivery!
           </p>
         )}
 
@@ -43,12 +43,12 @@ const OrderSummary = ({
 
         <div className="flex justify-between font-bold text-gray-800 text-base">
           <span>Total</span>
-          <span>${total.toFixed(2)}</span>
+          <span>LKR {total.toFixed(2)}</span>
         </div>
       </div>
 
       <button
-        onClick={() => onCheckout(items, total)}
+        onClick={() => onCheckout()}
         disabled={checkoutLoading || !items.length}
         className="w-full mt-5 bg-green-500 hover:bg-green-600 disabled:bg-green-300 disabled:cursor-not-allowed text-white font-semibold py-3.5 rounded-xl transition-all shadow-md shadow-green-200 flex items-center justify-center gap-2"
       >
@@ -60,7 +60,7 @@ const OrderSummary = ({
         ) : (
           <>
             <PackageCheck className="w-5 h-5" />
-            Proceed to Checkout · ${total.toFixed(2)}
+            Proceed to Checkout · LKR {total.toFixed(2)}
             <ChevronRight className="w-4 h-4" />
           </>
         )}

@@ -14,12 +14,10 @@ import SuppliersPage from './GrocerysupplierManagment/SuppliersPage'
 import SupplierFormPage from './GrocerysupplierManagment/SupplierFormPage'
 import MyGroceryItemsPage from './InventoryManagment/MyGroceryItemsPage'
 import MySubmissionsPage from './InventoryManagment/MySubmissionsPage'
-import AdminSubmissionsPage from './InventoryManagment/AdminSubmissionsPage'
+import AdminSubmissionsPage from './InventoryManagment/Adminsubmissionspage'
 import InventoryPage from './InventoryManagment/InventoryPage'
-import PaymentPage from './pages/Payment/PaymentPage'
-import SuccessPage from './pages/Payment/SuccessPage'
-import React from 'react'
-import CancelPage from './pages/Payment/CancelPage'
+import TransactionsPage from './InventoryManagment/TransactionsPage'
+import AccountingPage from './InventoryManagment/AccountingPage'
 
 export default function App() {
   return (
@@ -31,79 +29,30 @@ export default function App() {
           <PublicRoute><LoginPage /></PublicRoute>
         } />
 
-        <Route path="/payment" element={
-          <PublicRoute>
-            <PaymentPage />
-          </PublicRoute>
-        } />
-
-        <Route path="/payment/success" element={<SuccessPage />} />
-        <Route path="/payment/cancel" element={<CancelPage />} />
-
         <Route path="/dashboard" element={
           <PrivateRoute><DashboardPage /></PrivateRoute>
         } />
 
-        <Route path="/admin/users" element={
-          <PrivateRoute>
-            <PermissionRoute screenCode="SCREEN_USERS">
-              <UsersPage />
-            </PermissionRoute>
-          </PrivateRoute>
-        } />
+        <Route path="/admin/users" element={<PrivateRoute><PermissionRoute screenCode="SCREEN_USERS"><UsersPage /></PermissionRoute></PrivateRoute>} />
+        <Route path="/admin/roles" element={<PrivateRoute><PermissionRoute screenCode="SCREEN_ROLES"><RolesPage /></PermissionRoute></PrivateRoute>} />
+        <Route path="/admin/parent-menus" element={<PrivateRoute><PermissionRoute screenCode="SCREEN_PARENT_MENUS"><ParentMenusPage /></PermissionRoute></PrivateRoute>} />
+        <Route path="/admin/menus" element={<PrivateRoute><PermissionRoute screenCode="SCREEN_MENUS"><MenusPage /></PermissionRoute></PrivateRoute>} />
+        <Route path="/admin/screens" element={<PrivateRoute><PermissionRoute screenCode="SCREEN_SCREENS"><ScreensPage /></PermissionRoute></PrivateRoute>} />
 
-        <Route path="/admin/roles" element={
-          <PrivateRoute>
-            <PermissionRoute screenCode="SCREEN_ROLES">
-              <RolesPage />
-            </PermissionRoute>
-          </PrivateRoute>
-        } />
-        <Route path="/admin/parent-menus" element={
-          <PrivateRoute>
-            <PermissionRoute screenCode="SCREEN_PARENT_MENUS">
-              <ParentMenusPage />
-            </PermissionRoute>
-          </PrivateRoute>
-        } />
-        <Route path="/admin/menus" element={
-          <PrivateRoute>
-            <PermissionRoute screenCode="SCREEN_MENUS">
-              <MenusPage />
-            </PermissionRoute>
-          </PrivateRoute>
-        } />
-        <Route path="/admin/screens" element={
-          <PrivateRoute>
-            <PermissionRoute screenCode="SCREEN_SCREENS">
-              <ScreensPage />
-            </PermissionRoute>
-          </PrivateRoute>
-        } />
+        <Route path="/suppliers" element={<PrivateRoute><PermissionRoute screenCode="SCREEN_SUPPLIERS"><SuppliersPage /></PermissionRoute></PrivateRoute>} />
+        <Route path="/suppliers/add" element={<PrivateRoute><PermissionRoute screenCode="SCREEN_SUPPLIERS_ADD"><SupplierFormPage /></PermissionRoute></PrivateRoute>} />
+        <Route path="/suppliers/edit/:id" element={<PrivateRoute><PermissionRoute screenCode="SCREEN_SUPPLIERS_ADD"><SupplierFormPage /></PermissionRoute></PrivateRoute>} />
 
-        <Route path="/suppliers" element={
-          <PrivateRoute>
-            <PermissionRoute screenCode="SCREEN_SUPPLIERS">
-              <SuppliersPage />
-            </PermissionRoute>
-          </PrivateRoute>
-        } />
-
-        <Route path="/suppliers/add" element={
-          <PrivateRoute><PermissionRoute screenCode="SCREEN_SUPPLIERS_ADD"><SupplierFormPage /></PermissionRoute></PrivateRoute>
-        } />
-        <Route path="/suppliers/edit/:id" element={
-          <PrivateRoute><PermissionRoute screenCode="SCREEN_SUPPLIERS_ADD"><SupplierFormPage /></PermissionRoute></PrivateRoute>
-        } />
-
-         <Route path="/my-grocery-items"   element={<PrivateRoute><MyGroceryItemsPage /></PrivateRoute>} />
+        <Route path="/my-grocery-items"   element={<PrivateRoute><MyGroceryItemsPage /></PrivateRoute>} />
         <Route path="/my-submissions"     element={<PrivateRoute><MySubmissionsPage /></PrivateRoute>} />
         <Route path="/grocery-submissions" element={<PrivateRoute><AdminSubmissionsPage /></PrivateRoute>} />
         <Route path="/inventory"          element={<PrivateRoute><InventoryPage /></PrivateRoute>} />
+        
+        <Route path="/transactions"       element={<PrivateRoute><TransactionsPage /></PrivateRoute>} />
+        <Route path="/my-transactions"    element={<PrivateRoute><TransactionsPage /></PrivateRoute>} />
+        <Route path="/admin/accounting"   element={<PrivateRoute><AccountingPage /></PrivateRoute>} />
 
         <Route path="*" element={<NotFoundPage />} />
-
-        
       </Routes>
     </AuthProvider>
   )

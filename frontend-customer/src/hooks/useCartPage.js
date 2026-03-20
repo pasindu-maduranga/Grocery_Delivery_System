@@ -94,16 +94,12 @@ export const useCartPage = () => {
     }
   };
 
-  const handleCheckout = async (items, total) => {
+  const handleCheckout = async () => {
     if (!items?.length) return toast.error("Your cart is empty");
     setCheckoutLoading(true);
     try {
-      const stripeItems = items.map((item) => ({
-        name:  item.name,
-        price: item.price,
-        qty:   item.qty,
-      }));
-      const res = await createCheckoutSession(stripeItems);
+      // No need to pass items, backend will use stored cart
+      const res = await createCheckoutSession();
       window.location.href = res.data.url;
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to start checkout");
@@ -115,7 +111,7 @@ export const useCartPage = () => {
   const items       = cart?.items         || [];
   const subtotal    = cart?.subtotal      ?? items.reduce((s, i) => s + i.price * i.qty, 0);
   const discountAmt = cart?.discountAmount ?? 0;
-  const deliveryFee = cart?.deliveryFee   ?? (subtotal > 30 ? 0 : 5.99);
+  const deliveryFee = cart?.deliveryFee   ?? (subtotal > 3000 ? 0 : 250); // LKR thresholds
   const total       = cart?.total         ?? (subtotal - discountAmt + deliveryFee);
   const discount    = cart?.discount      ?? 0;
   const couponCode  = cart?.couponCode    ?? null;

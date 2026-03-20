@@ -14,6 +14,8 @@ const grocerySubmissionSchema = new mongoose.Schema({
   reviewedAt:       { type: Date },
   reviewNote:       { type: String, trim: true },
   isRead:           { type: Boolean, default: false },
+  isPaid:            { type: Boolean, default: false },
+  paidAt:            { type: Date },
 }, { timestamps: true });
 
 module.exports = mongoose.models.GrocerySubmission || mongoose.model('GrocerySubmission', grocerySubmissionSchema);

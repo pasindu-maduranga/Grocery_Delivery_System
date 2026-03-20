@@ -1,160 +1,73 @@
-import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { notificationsAPI } from '../../api/index'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { Bell, Package, CheckCircle2, XCircle, AlertTriangle, ImageOff } from 'lucide-react'
+import { 
+  LogOut, Settings 
+} from 'lucide-react'
 import React from 'react'
+import NotificationBell from '../../InventoryManagment/Notificationbell'
 
-const ICONS = {
-  submission_received: { Icon: Package, color: 'text-blue-500', bg: 'bg-blue-50' },
-  submission_accepted: { Icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-  submission_rejected: { Icon: XCircle, color: 'text-red-400', bg: 'bg-red-50' },
-  reorder_alert:       { Icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-50' },
-}
-
-export default function NotificationBell() {
-  const { isSuperAdmin, isSupplier, user } = useAuth()
-  const [notifications, setNotifications] = useState([])
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const dropdownRef = useRef(null)
-  const navigate = useNavigate()
+export default function Topbar({ title, subtitle }) {
+  const { user, isSupplier, logout } = useAuth()
+  const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
-    loadCount()
-    const interval = setInterval(loadCount, 30000)
-    return () => clearInterval(interval)
+    const handleScroll = () => setScrolled(window.scrollY > 10)
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  const displayName = isSupplier
+    ? (user?.contactPersonName || user?.businessName)
+    : (user?.firstName ? `${user.firstName} ${user.lastName || ''}` : user?.username)
 
-  const loadCount = async () => {
-    try {
-      const res = isSuperAdmin
-        ? await notificationsAPI.getAdmin()
-        : await notificationsAPI.getSupplier()
-      setUnreadCount(res.data.unreadCount)
-    } catch {}
-  }
-
-  const handleOpen = async () => {
-    setOpen(o => !o)
-    if (!open) {
-      setLoading(true)
-      try {
-        const res = isSuperAdmin
-          ? await notificationsAPI.getAdmin()
-          : await notificationsAPI.getSupplier()
-        setNotifications(res.data.data)
-        setUnreadCount(res.data.unreadCount)
-      } finally { setLoading(false) }
-    }
-  }
-
-  const markRead = async (id) => {
-    try {
-      if (isSuperAdmin) await notificationsAPI.markAdminRead(id)
-      else await notificationsAPI.markSupplierRead(id)
-      setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n))
-      setUnreadCount(prev => Math.max(0, prev - 1))
-    } catch {}
-  }
-
-  const markAllRead = async () => {
-    try {
-      if (isSuperAdmin) await notificationsAPI.markAdminRead('all')
-      else await notificationsAPI.markSupplierRead('all')
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
-      setUnreadCount(0)
-    } catch {}
-  }
-
-  const handleNotifClick = (notif) => {
-    if (!notif.isRead) markRead(notif._id)
-    if (notif.type === 'submission_received' || notif.type === 'reorder_alert') {
-      if (isSuperAdmin) navigate('/grocery-submissions')
-    } else if (notif.type === 'submission_accepted' || notif.type === 'submission_rejected') {
-      navigate('/my-submissions')
-    }
-    setOpen(false)
-  }
-
-  const timeAgo = (date) => {
-    const diff = (Date.now() - new Date(date)) / 1000
-    if (diff < 60) return 'just now'
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-    return `${Math.floor(diff / 86400)}d ago`
-  }
+  const userRole = isSupplier ? 'Supplier' : (user?.isSuperAdmin ? 'Super Admin' : user?.role?.name || 'System User')
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button onClick={handleOpen}
-        className="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-500 transition-colors">
-        <Bell size={18} />
-        {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
-        )}
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-11 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-            <div>
-              <span className="font-semibold text-slate-800 text-sm">Notifications</span>
-              {unreadCount > 0 && <span className="ml-2 text-xs bg-red-100 text-red-600 font-medium px-1.5 py-0.5 rounded-full">{unreadCount} new</span>}
-            </div>
-            {unreadCount > 0 && (
-              <button onClick={markAllRead} className="text-xs text-emerald-600 hover:text-emerald-700 font-medium">
-                Mark all read
-              </button>
-            )}
+    <header className={`sticky top-0 z-30 transition-all duration-300 ${
+      scrolled ? 'bg-white/90 backdrop-blur-md shadow-sm' : 'bg-[#f8faf8]'
+    } px-8 h-20 flex items-center justify-between border-b border-emerald-50/50`}>
+      
+      {/* Left Aligned: Profile Info */}
+      <div className="flex items-center gap-4 animate-in fade-in slide-in-from-left-4 duration-500">
+        <div className="relative">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-900 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-emerald-900/10 border border-emerald-800">
+            {displayName ? displayName[0].toUpperCase() : 'U'}
           </div>
-
-          <div className="max-h-96 overflow-y-auto">
-            {loading ? (
-              <div className="py-8 flex justify-center">
-                <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className="py-10 text-center text-slate-400">
-                <Bell size={32} className="mx-auto mb-2 text-slate-200" />
-                <p className="text-sm">No notifications yet</p>
-              </div>
-            ) : (
-              notifications.map(notif => {
-                const iconInfo = ICONS[notif.type] || ICONS.submission_received
-                const Icon = iconInfo.Icon
-                return (
-                  <div key={notif._id} onClick={() => handleNotifClick(notif)}
-                    className={`flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 ${!notif.isRead ? 'bg-blue-50/40' : ''}`}>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${iconInfo.bg}`}>
-                      <Icon size={15} className={iconInfo.color} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-semibold text-slate-800">{notif.title}</div>
-                      <div className="text-xs text-slate-500 mt-0.5 line-clamp-2">{notif.message}</div>
-                      <div className="text-[10px] text-slate-400 mt-1">{timeAgo(notif.createdAt)}</div>
-                    </div>
-                    {!notif.isRead && <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5" />}
-                  </div>
-                )
-              })
-            )}
-          </div>
+          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></div>
         </div>
-      )}
-    </div>
+        
+        <div className="flex flex-col">
+          <h4 className="text-base font-black text-slate-800 leading-tight">
+            {displayName || 'Guest User'}
+          </h4>
+          <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-md mt-0.5 border border-emerald-100/50">
+            {userRole}
+          </span>
+        </div>
+      </div>
+
+      {/* Right Aligned: Notifications & Logout */}
+      <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-4 duration-500">
+        <div className="flex items-center gap-3 pr-4 border-r border-slate-200">
+           <NotificationBell />
+        </div>
+
+        <button 
+          onClick={logout}
+          className="flex items-center gap-2 px-4 py-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl font-bold transition-all duration-200 group"
+        >
+          <span className="text-xs">Sign Out</span>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
+            <LogOut size={18} />
+          </div>
+        </button>
+
+        <div className="relative group">
+           <button className="p-2 text-slate-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors">
+              <Settings size={18} />
+           </button>
+        </div>
+      </div>
+    </header>
   )
 }

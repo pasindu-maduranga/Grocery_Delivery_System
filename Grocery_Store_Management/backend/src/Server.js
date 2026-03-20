@@ -13,10 +13,23 @@ const groceryItemRoutes = require('./Routes/groceryItems');
 const grocerySubmissionRoutes = require('./Routes/grocerySubmissions');
 const inventoryRoutes = require('./Routes/inventory');
 const notificationRoutes = require('./Routes/notifications');
+const paymentRoutes = require('./Routes/payments');
+const storefrontRoutes = require('./Routes/storefront');
 
 const app = express();
 
-app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173' }));
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || origin.startsWith('http://localhost:') || origin === process.env.FRONTEND_URL) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -29,6 +42,9 @@ app.use('/api/grocery-items', groceryItemRoutes);
 app.use('/api/grocery-submissions', grocerySubmissionRoutes);
 app.use('/api/inventory',inventoryRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/storefront', storefrontRoutes);
+
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.use((req, res) => res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` }));

@@ -3,20 +3,26 @@ import { Plus, Minus, Trash2 } from "lucide-react";
 const CartItemCard = ({ item, isUpdating, onUpdateQty, onRemove }) => (
   <div className={`bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-4 transition-opacity ${isUpdating ? "opacity-60" : ""}`}>
     {/* Image */}
-    <div className="w-16 h-16 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl flex items-center justify-center text-3xl flex-shrink-0">
-      {item.image}
+    <div className="w-20 h-20 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0 border border-gray-100 shadow-sm">
+      {item.image?.startsWith('http') ? (
+        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+      ) : (
+        <span className="text-3xl">{item.image || '🛒'}</span>
+      )}
     </div>
 
     {/* Info */}
-    <div className="flex-1 min-w-0">
-      <p className="text-xs text-gray-400">{item.category}</p>
-      <h3 className="font-semibold text-gray-800 truncate">{item.name}</h3>
-      <p className="text-green-600 font-bold">
-        ${(item.price * item.qty).toFixed(2)}
-        <span className="text-gray-400 text-xs font-normal ml-1">
-          (${item.price} × {item.qty})
+    <div className="flex-1 min-w-0 pr-2">
+      <h3 className="font-semibold text-gray-800 truncate text-base mb-0.5">{item.name}</h3>
+      <p className="text-xs text-green-600 font-medium bg-green-50 inline-block px-2 py-0.5 rounded-md mb-1.5">{item.category}</p>
+      <div className="flex items-center gap-2">
+        <p className="text-gray-800 font-bold text-sm">
+          LKR {(item.price * item.qty).toFixed(2)}
+        </p>
+        <span className="text-gray-400 text-xs font-medium">
+          (LKR {item.price.toFixed(2)} / each)
         </span>
-      </p>
+      </div>
     </div>
 
     {/* Qty Controls */}

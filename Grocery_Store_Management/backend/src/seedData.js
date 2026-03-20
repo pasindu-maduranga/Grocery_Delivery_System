@@ -362,6 +362,14 @@ const screens = [
     description: 'View all payment transaction logs',
     order: 1,
   },
+  {
+    name: 'Accounting & Analytics',
+    code: 'SCREEN_ACCOUNTING',
+    menuCode: 'TRANSACTIONS',
+    route: '/admin/accounting',
+    description: 'Financial dashboard and profit analytics',
+    order: 2,
+  },
 
   // ── Grocery Management ──
   {

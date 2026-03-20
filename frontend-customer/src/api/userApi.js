@@ -26,4 +26,6 @@ api.interceptors.response.use(
   }
 );
 
+export const getOrders = () => api.get("/user/orders");
+
 export default api;

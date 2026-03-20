@@ -186,6 +186,26 @@ const logout = (req, res) => {
   res.json({ success: true, message: 'Logged out successfully' });
 };
 
+const updateSupplierProfile = async (req, res) => {
+  try {
+    const supplier = await Supplier.findById(req.user._id);
+    if (!supplier) return res.status(404).json({ success: false, message: 'Supplier not found' });
+
+    const editableFields = [
+      'contactPersonName', 'phone', 'whatsapp', 'website',
+      'streetAddress', 'city', 'stateProvince', 'postalCode', 'country',
+      'bankName', 'accountHolderName', 'accountNumber', 'swiftCode', 'paymentMethod',
+    ];
+    editableFields.forEach(f => { if (req.body[f] !== undefined) supplier[f] = req.body[f]; });
+
+    await supplier.save({ validateBeforeSave: false });
+    const updated = await Supplier.findById(supplier._id).populate('role', 'name').select('-password');
+    res.json({ success: true, message: 'Profile updated', data: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const buildFullSidebar = async () => {
   const parentMenus = await ParentMenu.find({ isActive: true }).sort('order');
   const result = [];
@@ -225,4 +245,4 @@ const buildFilteredSidebar = async (viewableScreenCodes) => {
   return result;
 };
 
-module.exports = { login, supplierLogin, getMe, getSupplierMe, logout };
+module.exports = { login, supplierLogin, getMe, getSupplierMe, logout, updateSupplierProfile };
