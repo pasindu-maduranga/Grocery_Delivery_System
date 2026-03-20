@@ -9,6 +9,11 @@ export const useCart = () => {
 
   useEffect(() => {
     const fetchCart = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+         setLoadingCart(false);
+         return;
+      }
       try {
         const res = await getCart();
         setCartItems(res.data.cart.items || []);
@@ -22,6 +27,15 @@ export const useCart = () => {
   }, []);
 
   const handleAddToCart = async (product) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Please login first to start adding items into your cart");
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 1500);
+      return;
+    }
+
     setAddingId(product.id);
     try {
       const existing = cartItems.find((i) => i.productId === product.id);

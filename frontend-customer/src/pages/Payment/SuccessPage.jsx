@@ -1,21 +1,26 @@
 import { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { CheckCircle, ShoppingBag } from "lucide-react";
-import { clearCart } from "../../api/cartApi";
+import { verifyCheckout } from "../../api/paymentApi";
 
 const PaymentSuccess = () => {
+  const [searchParams] = useSearchParams();
+  const sessionId = searchParams.get("session_id");
 
-  // Clear cart after successful payment
+  // Verify checkout session and trigger sync/deductions
   useEffect(() => {
-    const clear = async () => {
-      try {
-        await clearCart();
-      } catch {
-        // silent — cart may already be cleared via webhook later
+    const verify = async () => {
+      if (sessionId) {
+        try {
+          // This calls User Service, which in turn calls Grocery Service
+          await verifyCheckout(sessionId);
+        } catch {
+          // silent — webhook handles fallback or link expires
+        }
       }
     };
-    clear();
-  }, []);
+    verify();
+  }, [sessionId]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">

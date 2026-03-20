@@ -24,4 +24,7 @@ userRouter.post('/avatar', authMiddleware, upload.single('avatar'), userControll
 //http://localhost:5003/api/user/dashboard
 userRouter.get('/dashboard', authMiddleware, userController.getDashboard);
 
+//http://localhost:5003/api/user/orders
+userRouter.get('/orders', authMiddleware, userController.getOrders);
+
 module.exports=userRouter;

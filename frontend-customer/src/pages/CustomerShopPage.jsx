@@ -30,8 +30,8 @@ export default function CustomerShopPage() {
   // Filtering state
   const [filters, setFilters] = useState({
     categories: [],
-    priceRange: [0, 50],
-    inStockOnly: true,
+    priceRange: [0, 10000],
+    inStockOnly: false,
     flashSales: false,
   });
 
@@ -68,13 +68,13 @@ export default function CustomerShopPage() {
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
-      if (!p.isVisible) return false;
+      if (!p.isActive) return false;
       
-      const searchMatch = p.displayName?.toLowerCase().includes(searchQuery.toLowerCase());
-      const categoryMatch = selectedCategory === "All" || p.category === selectedCategory;
-      const filterCategoryMatch = filters.categories.length === 0 || filters.categories.includes(p.category);
+      const searchMatch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
+      const categoryMatch = selectedCategory === "All" || p.groceryType === selectedCategory;
+      const filterCategoryMatch = filters.categories.length === 0 || filters.categories.includes(p.groceryType);
       const stockMatch = !filters.inStockOnly || p.stockQuantity > 0;
-      const priceMatch = p.sellingPrice >= filters.priceRange[0] && p.sellingPrice <= filters.priceRange[1];
+      const priceMatch = p.sellingPricePerUnit >= filters.priceRange[0] && p.sellingPricePerUnit <= filters.priceRange[1];
 
       return searchMatch && categoryMatch && filterCategoryMatch && stockMatch && priceMatch;
     });
@@ -140,7 +140,7 @@ export default function CustomerShopPage() {
           <div className="flex items-center justify-between mb-6">
             <h3 className="font-black text-lg">Filters</h3>
             <button 
-              onClick={() => setFilters({ categories: [], priceRange: [0, 50], inStockOnly: true, flashSales: false })}
+              onClick={() => setFilters({ categories: [], priceRange: [0, 10000], inStockOnly: false, flashSales: false })}
               className="text-xs font-bold text-emerald-600 hover:text-emerald-700 uppercase tracking-widest"
             >
               Clear All
@@ -174,7 +174,7 @@ export default function CustomerShopPage() {
               </div>
               <input 
                 type="range" 
-                min="0" max="1000" 
+                min="0" max="10000" 
                 value={filters.priceRange[1]} 
                 onChange={(e) => setFilters(p => ({ ...p, priceRange: [p.priceRange[0], Number(e.target.value)] }))}
                 className="w-full accent-emerald-600 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
@@ -298,8 +298,8 @@ export default function CustomerShopPage() {
                      {/* Image */}
                      <div className="aspect-square bg-gray-50 rounded-[1rem] mb-4 overflow-hidden relative">
                         <img 
-                          src={product.groceryItem?.image || 'https://via.placeholder.com/300?text=No+Image'} 
-                          alt={product.displayName} 
+                          src={product.groceryItem?.image || product.image || 'https://via.placeholder.com/300?text=No+Image'} 
+                          alt={product.name} 
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                      </div>
@@ -307,7 +307,7 @@ export default function CustomerShopPage() {
                      <div className="flex flex-col flex-1">
                         {/* Meta */}
                         <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-                           <span className="bg-gray-100 px-2 py-1 rounded-md">{product.category}</span>
+                           <span className="bg-gray-100 px-2 py-1 rounded-md">{product.groceryType}</span>
                            {product.stockQuantity > 0 ? (
                              <span className="text-emerald-600">In Stock</span>
                            ) : (
@@ -317,9 +317,9 @@ export default function CustomerShopPage() {
 
                         {/* Title */}
                         <h4 className="font-bold text-gray-900 leading-tight mb-1 group-hover:text-emerald-600 transition-colors line-clamp-2">
-                           {product.displayName}
+                           {product.name}
                         </h4>
-                        <p className="text-xs text-gray-400 mb-2">per {product.groceryItem?.measuringUnit || 'Unit'}</p>
+                        <p className="text-xs text-gray-400 mb-2">per {product.groceryItem?.measuringUnit || product.measuringUnit || 'Unit'}</p>
 
                         {/* Rating */}
                         <div className="flex items-center gap-1 mb-4">
@@ -332,9 +332,9 @@ export default function CustomerShopPage() {
                         {/* Price & Add to Cart */}
                         <div className="mt-auto">
                            <div className="flex items-end gap-2 mb-4">
-                              <span className="text-2xl font-black text-gray-900">LKR {product.sellingPrice}</span>
-                              {product.groceryItem?.unitPrice && (
-                                <span className="text-sm font-bold text-gray-400 line-through mb-1">LKR {product.sellingPrice + 50}</span>
+                              <span className="text-2xl font-black text-gray-900">LKR {product.sellingPricePerUnit}</span>
+                              {product.purchasePricePerUnit && (
+                                <span className="text-sm font-bold text-gray-400 line-through mb-1">LKR {Math.round(product.sellingPricePerUnit * 1.15)}</span>
                               )}
                            </div>
                            
@@ -346,13 +346,13 @@ export default function CustomerShopPage() {
                                 >-</button>
                                 <span className="font-black text-emerald-900 w-8 text-center">{inCart.quantity}</span>
                                 <button 
-                                  onClick={() => handleAddToCart({ ...product, id: product._id, price: product.sellingPrice, name: product.displayName, category: product.category, stock: product.stockQuantity, isStorefront: true, image: product.groceryItem?.image })}
+                                  onClick={() => handleAddToCart({ ...product, id: product._id, price: product.sellingPricePerUnit, name: product.name, category: product.groceryType, stock: product.stockQuantity, isStorefront: true, image: product.groceryItem?.image || product.image })}
                                   className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-emerald-600 shadow-sm hover:bg-emerald-700"
                                 >+</button>
                              </div>
                            ) : (
                              <button 
-                               onClick={() => handleAddToCart({ ...product, id: product._id, price: product.sellingPrice, name: product.displayName, category: product.category, stock: product.stockQuantity, isStorefront: true, image: product.groceryItem?.image })}
+                               onClick={() => handleAddToCart({ ...product, id: product._id, price: product.sellingPricePerUnit, name: product.name, category: product.groceryType, stock: product.stockQuantity, isStorefront: true, image: product.groceryItem?.image || product.image })}
                                disabled={product.stockQuantity <= 0 || addingId === product._id}
                                className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors ${
                                  product.stockQuantity <= 0 
