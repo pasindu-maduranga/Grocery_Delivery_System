@@ -1,5 +1,5 @@
-const SystemUser = require('../models/SystemUser');
-const Role = require('../models/Role');
+const SystemUser = require('../Models/SystemUser');
+const Role = require('../Models/Role');
 
 
 const getAllUsers = async (req, res) => {
