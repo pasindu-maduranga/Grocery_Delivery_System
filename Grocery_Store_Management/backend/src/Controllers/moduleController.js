@@ -1,6 +1,6 @@
-const ParentMenu = require('../models/ParentMenu');
-const Menu = require('../models/Menu');
-const Screen = require('../models/Screen');
+const ParentMenu = require('../Models/ParentMenu');
+const Menu = require('../Models/Menu');
+const Screen = require('../Models/Screen');
 
 // ─── PARENT MENUS ─────────────────────────────────────────────────
 

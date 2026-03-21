@@ -1,5 +1,5 @@
-const Role = require('../models/Role');
-const Screen = require('../models/Screen');
+const Role = require('../Models/Role');
+const Screen = require('../Models/Screen');
 
 
 const getAllRoles = async (req, res) => {
@@ -72,7 +72,7 @@ const deleteRole = async (req, res) => {
     if (!role) return res.status(404).json({ success: false, message: 'Role not found' });
     if (role.isSuperAdmin) return res.status(400).json({ success: false, message: 'Cannot delete Super Admin role' });
 
-    const SystemUser = require('../models/SystemUser');
+    const SystemUser = require('../Models/SystemUser');
     const usersWithRole = await SystemUser.countDocuments({ role: role._id, isActive: true });
     if (usersWithRole > 0) {
       return res.status(400).json({
@@ -94,8 +94,8 @@ const getRolePermissions = async (req, res) => {
     const role = await Role.findById(req.params.id);
     if (!role) return res.status(404).json({ success: false, message: 'Role not found' });
 
-    const ParentMenu = require('../models/ParentMenu');
-    const Menu = require('../models/Menu');
+    const ParentMenu = require('../Models/ParentMenu');
+    const Menu = require('../Models/Menu');
 
     const permissionLookup = {};
     role.permissions.forEach((p) => {
