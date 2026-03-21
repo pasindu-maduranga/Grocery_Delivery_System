@@ -1,11 +1,8 @@
 const express = require('express');
 const userRouter = express.Router();
-const multer = require('multer');
 const userController = require('../controllers/userController');
 const authMiddleware = require('../middleware/authMiddleware');
-const upload = multer({
-    dest: '/uploads'
-});
+const uploadAvatar = require('../middleware/uploadAvatarMiddleware');
 
 //Protected user routes
 
@@ -19,12 +16,15 @@ userRouter.put('/update-profile', authMiddleware, userController.updateProfile);
 userRouter.put('/update-password', authMiddleware, userController.updatePassword);
 
 //http://localhost:5003/api/user/avatar
-userRouter.post('/avatar', authMiddleware, upload.single('avatar'), userController.uploadAvatar);
+userRouter.patch('/avatar', authMiddleware, uploadAvatar.single('avatar'), userController.uploadAvatar);
 
 //http://localhost:5003/api/user/dashboard
 userRouter.get('/dashboard', authMiddleware, userController.getDashboard);
 
 //http://localhost:5003/api/user/orders
 userRouter.get('/orders', authMiddleware, userController.getOrders);
+
+//http://localhost:5003/api/user/update-location
+userRouter.patch('/update-location', authMiddleware, userController.updateLocation);
 
 module.exports=userRouter;

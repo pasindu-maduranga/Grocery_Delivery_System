@@ -45,7 +45,7 @@ export default function ProductGrid({
       </div>
 
       <div className="mt-12 flex justify-center">
-        <button className="px-8 py-3.5 border-2 border-emerald-600 text-emerald-700 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all shadow-xl shadow-emerald-600/10">
+        <button className="px-8 py-3.5 border-2 border-green-600 text-green-700 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-green-600 hover:text-white transition-all shadow-xl shadow-green-600/10">
           Load More Products
         </button>
       </div>
