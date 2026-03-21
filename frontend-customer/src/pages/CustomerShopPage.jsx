@@ -18,13 +18,17 @@ export default function CustomerShopPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
-  const { cartCount, handleAddToCart, addingId, cartItems, handleDecrement } = useCart();
+  const { cartCount, handleAddToCart, addingId, cartItems, handleDecrement } =
+    useCart();
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
-        const res = await storefrontAPI.getAll({ limit: 50, sort: "-createdAt" });
+        const res = await storefrontAPI.getAll({
+          limit: 50,
+          sort: "-createdAt",
+        });
         setProducts(res?.data?.data || []);
       } catch {
         toast.error("Failed to load storefront products");
@@ -41,18 +45,28 @@ export default function CustomerShopPage() {
       if (!p?.isActive) return false;
 
       const searchMatch = p.name?.toLowerCase().includes(q);
-      const categoryMatch = selectedCategory === "All" || p.groceryType === selectedCategory;
+      const categoryMatch =
+        selectedCategory === "All" || p.groceryType === selectedCategory;
       const filterCategoryMatch =
-        filters.categories.length === 0 || filters.categories.includes(p.groceryType);
+        filters.categories.length === 0 ||
+        filters.categories.includes(p.groceryType);
       const stockMatch = !filters.inStockOnly || p.stockQuantity > 0;
       const priceMatch =
         p.sellingPricePerUnit >= filters.priceRange[0] &&
         p.sellingPricePerUnit <= filters.priceRange[1];
 
       const flashMatch =
-        !filters.flashSales || Boolean(p.isFlashSale || p.flashSale || p.discountPercentage > 0);
+        !filters.flashSales ||
+        Boolean(p.isFlashSale || p.flashSale || p.discountPercentage > 0);
 
-      return searchMatch && categoryMatch && filterCategoryMatch && stockMatch && priceMatch && flashMatch;
+      return (
+        searchMatch &&
+        categoryMatch &&
+        filterCategoryMatch &&
+        stockMatch &&
+        priceMatch &&
+        flashMatch
+      );
     });
   }, [products, searchQuery, selectedCategory, filters]);
 

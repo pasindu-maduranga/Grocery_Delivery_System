@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # Grocery Store Management Backend
+  grocery-backend:
+    build: ./Grocery_Store_Management/backend/src
+    container_name: grocery-backend
+    ports:
+      - "5000:5001"
+    env_file:
+      - ./Grocery_Store_Management/backend/src/.env
+    restart: unless-stopped
+    networks:
+      - grocery-network
+
+  # User Management & Payment Service
+  user-service:
+    build: ./User_Management_and_Payment_Service/backend
+    container_name: user-payment-service
+    ports:
+      - "5003:5003"
+    env_file:
+      - ./User_Management_and_Payment_Service/backend/.env
+    restart: unless-stopped
+    networks:
+      - grocery-network
+
+  # Delivery Management Backend
+  delivery-backend:
+    build: ./Delivery_Management/backend
+    container_name: delivery-service
+    ports:
+      - "5002:5001"
+    env_file:
+      - ./Delivery_Management/backend/.env
+    restart: unless-stopped
+    networks:
+      - grocery-network
+
+networks:
+  grocery-network:
+    driver: bridge
