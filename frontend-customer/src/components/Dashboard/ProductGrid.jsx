@@ -1,31 +1,54 @@
 import { ShoppingCart } from "lucide-react";
-import ProductCard from "./ProductCard";
+import ProductCard from "./Card";
 
-const ProductGrid = ({ products, cartItems, addingId, onAdd, onDecrement }) => {
-  if (products.length === 0) {
+export default function ProductGrid({
+  loading,
+  products,
+  cartItems,
+  addingId,
+  onAddToCart,
+  onDecrement,
+}) {
+  if (loading) {
     return (
-      <div className="text-center py-16 text-gray-400">
-        <ShoppingCart className="w-12 h-12 mx-auto mb-3 opacity-30" />
-        <p className="font-medium">No products found</p>
-        <p className="text-sm">Try a different search or category</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+          <div key={i} className="animate-pulse bg-gray-100 rounded-2xl h-[360px]" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!products.length) {
+    return (
+      <div className="py-20 text-center text-gray-400">
+        <ShoppingCart className="w-16 h-16 mx-auto mb-4 opacity-20" />
+        <p className="font-bold text-lg text-gray-800 mb-2">No products found</p>
+        <p className="text-sm">Try adjusting your filters or search terms.</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
-      {products.map((product) => (
-        <ProductCard
-          key={product.id}
-          product={product}
-          inCart={cartItems.find((i) => i.productId === product.id)}
-          isAdding={addingId === product.id}
-          onAdd={onAdd}
-          onDecrement={onDecrement}
-        />
-      ))}
-    </div>
-  );
-};
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {products.map((product) => (
+          <ProductCard
+            key={product._id}
+            product={product}
+            inCart={cartItems.find((i) => i.productId === product._id)}
+            adding={addingId === product._id}
+            onAddToCart={onAddToCart}
+            onDecrement={onDecrement}
+          />
+        ))}
+      </div>
 
-export default ProductGrid;
+      <div className="mt-12 flex justify-center">
+        <button className="px-8 py-3.5 border-2 border-emerald-600 text-emerald-700 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all shadow-xl shadow-emerald-600/10">
+          Load More Products
+        </button>
+      </div>
+    </>
+  );
+}
