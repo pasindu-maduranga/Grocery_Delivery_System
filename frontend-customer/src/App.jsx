@@ -33,7 +33,7 @@ function App() {
         <Route path="/payment/cancel" element={<PaymentCancel />} />
 
         {/* Default */}
-        <Route path="/" element={<CustomerShopPage />} />
+        <Route path="/" element={<Login />} />
       </Routes>
     </BrowserRouter>
   );

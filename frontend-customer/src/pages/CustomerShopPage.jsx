@@ -85,9 +85,9 @@ export default function CustomerShopPage() {
       {/* Navbar */}
       <header className="border-b border-gray-100 py-4 px-6 sticky top-0 bg-white z-40 shadow-sm">
         <div className="max-w-[1400px] mx-auto flex items-center justify-between gap-6">
-          <Link to="/" className="flex items-center gap-2 text-2xl font-black text-emerald-600 tracking-tight">
+          <Link to="/dashboard" className="flex items-center gap-2 text-2xl font-black text-emerald-600 tracking-tight">
             <Leaf className="w-8 h-8 fill-emerald-600" />
-            FreshCart
+            RapidCart
           </Link>
 
           <div className="flex-1 max-w-2xl hidden md:block">
