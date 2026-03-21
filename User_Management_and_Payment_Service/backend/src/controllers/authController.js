@@ -22,7 +22,21 @@ const registerNewUser = async(req, res) => {
 //login
 const userLogin = async(req, res) => {
     try{
-        const result = await loginUser(req.body);
+        const { latitude, longitude, address, ...loginCredentials } = req.body;
+        
+        const result = await loginUser(loginCredentials);
+        
+        // Update user location if provided
+        if (latitude && longitude && result.user) {
+            result.user.location = {
+                latitude,
+                longitude,
+                address: address || 'Login location',
+                lastUpdated: new Date()
+            };
+            await result.user.save();
+        }
+        
         res.status(201).json ({
             success: true,
             message: 'User login successful',

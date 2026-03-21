@@ -8,6 +8,13 @@ const userSchema = new mongoose.Schema({
     //common fields for all users
     ...commonUserFields,
     
+    // Location tracking
+    location: {
+        latitude: { type: Number },
+        longitude: { type: Number },
+        address: { type: String },
+        lastUpdated: { type: Date }
+    },
     // Delivery person specific fields
     // ...deliveryPersonFields,
     

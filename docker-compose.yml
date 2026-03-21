@@ -21,6 +21,8 @@ services:
       - "5003:5003"
     env_file:
       - ./User_Management_and_Payment_Service/backend/.env
+    volumes:
+      - ./User_Management_and_Payment_Service/backend/uploads:/app/uploads
     restart: unless-stopped
     networks:
       - grocery-network
