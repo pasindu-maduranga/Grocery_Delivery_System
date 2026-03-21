@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, ShoppingCart } from "lucide-react";
@@ -37,7 +36,7 @@ const CustomerLoginForm = () => {
       localStorage.setItem("user", JSON.stringify(res.data.user));
 
       toast.success("Welcome back! Login successful");
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       toast.error(err.response?.data?.message || "Login failed");
     } finally {
