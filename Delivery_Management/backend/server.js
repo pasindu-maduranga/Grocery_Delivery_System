@@ -123,7 +123,7 @@ io.on('connection', (socket) => {
 });
 
 // ✅ Start Server
-const PORT = process.env.PORT || 5005;
+const PORT = process.env.PORT || 5000;
 if (!process.env.VERCEL) {
   server.listen(PORT, () => {
     console.log(`Delivery Service running on port ${PORT}`);

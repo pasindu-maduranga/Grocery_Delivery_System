@@ -11,19 +11,8 @@ connectDB();
 
 const app = express();
 
-const allowedOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || 'http://localhost:5173,http://localhost:5174')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-
 app.use(cors({
-    origin: (origin, callback) => {
-        // Allow non-browser tools (e.g. Postman/curl) and configured browser origins.
-        if (!origin || allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
-        return callback(new Error(`CORS blocked for origin: ${origin}`));
-    },
+    origin: process.env.FRONTEND_URL,
     credentials: true
 }));
 
@@ -36,7 +25,7 @@ app.use(passport.session());
 
 routes(app);
 
-const PORT = process.env.PORT || 5004
+const PORT = process.env.PORT || 5003
 if (!process.env.VERCEL) {
     app.listen(PORT,() => {
         console.log(`Listening on PORT ${PORT} : http://localhost:${PORT}`);
