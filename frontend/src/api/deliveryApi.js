@@ -1,7 +1,7 @@
 // src/api/deliveryApi.js
 // Central API layer — matches your backend routes exactly
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/delivery-api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
