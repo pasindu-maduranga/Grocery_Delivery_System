@@ -37,7 +37,7 @@ const CustomerLoginForm = () => {
       localStorage.setItem("user", JSON.stringify(res.data.user));
 
       toast.success("Welcome back! Login successful");
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       toast.error(err.response?.data?.message || "Login failed");
     } finally {
