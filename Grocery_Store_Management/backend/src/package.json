@@ -19,7 +19,8 @@
   "type": "commonjs",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon server.js",
+    "start": "nodemon Server.js",
+    "start:prod": "node Server.js",
     "seed": "node seed.js"
   },
   "author": "",
