@@ -10,7 +10,16 @@ const auth = async (req, res, next) => {
         }
         
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findOne({ _id: decoded.id, isActive: true });
+        const userId = decoded.id || decoded.userId;
+
+        // If it's a system_user (from Grocery Store), we trust the token without local DB lookup
+        if (decoded.userType === 'system_user' || decoded.role === 'admin') {
+            req.user = { _id: userId, ...decoded };
+            req.token = token;
+            return next();
+        }
+
+        const user = await User.findOne({ _id: userId });
         
         if (!user) {
             return res.status(401).json({ success: false, message: 'Invalid authentication token' });

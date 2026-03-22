@@ -28,6 +28,8 @@ import DriverDashboardPage from "./pages/DriverDashboardPage";
 import DeliveryTrackingPage from "./pages/DeliveryTrackingPage";
 import AdminAssignmentPage from "./pages/AdminAssignmentPage";
 import DriverProfilePage from "./pages/DriverProfilePage";
+import OrdersPage from "./OrderManagement/OrdersPage";
+import OrderDetailPage from "./OrderManagement/OrderDetailPage";
 
 export default function App() {
   const driverId = localStorage.getItem("fc_driver_id") || "";
@@ -214,6 +216,24 @@ export default function App() {
             element={
               <DriverProfilePage />
              
+            }
+          />
+
+          {/* Order Management */}
+          <Route
+            path="/orders"
+            element={
+              <PrivateRoute>
+                <OrdersPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/orders/:id"
+            element={
+              <PrivateRoute>
+                <OrderDetailPage />
+              </PrivateRoute>
             }
           />
 
