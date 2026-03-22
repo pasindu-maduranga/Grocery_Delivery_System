@@ -122,6 +122,35 @@ const verifyCheckout = async (req, res) => {
            { userId: userId },
            { $set: { items: [], discount: 0, couponCode: null } }
          );
+
+         // Step 4: Sync Order to Order & Notification Service
+         try {
+           const User = require('../models/UserModel');
+           const user = await User.findById(userId);
+           
+           await axios.post(process.env.ORDER_SERVICE_URL || 'http://localhost:5004/api/orders', {
+             orderId: order._id.toString(),
+             customerId: userId,
+             customerName: user ? user.name : 'Unknown Customer',
+             customerEmail: user ? user.email : '',
+             customerPhone: user ? user.phoneNo : '',
+             items: order.items.map(i => ({
+               productId: i.productId,
+               name: i.name,
+               qty: i.qty,
+               price: i.price,
+               image: i.image
+             })),
+             totalAmount: order.totalAmount,
+             shippingCost: order.deliveryFee || 0,
+             paymentStatus: 'paid',
+             paymentMethod: 'card',
+             shippingAddress: { street: user?.address || '' },
+           });
+           console.log('Order synced to Order & Notification Service:', order._id);
+         } catch (err) {
+           console.error('Inter-service order sync failed:', err.message);
+         }
       }
 
       res.json({ success: true, message: 'Payment verified, order updated and cart cleared.' });
