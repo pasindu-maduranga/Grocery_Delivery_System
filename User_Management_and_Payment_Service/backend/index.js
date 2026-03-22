@@ -12,11 +12,25 @@ connectDB();
 
 const app = express();
 
-app.use(cors({
-    origin: process.env.FRONTEND_URL,
-    credentials: true
-}));
+const allowedOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
 
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // allow non-browser tools
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
+console.log("ALLOWED ORIGINS:", allowedOrigins);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
