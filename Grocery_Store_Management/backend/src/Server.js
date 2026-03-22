@@ -45,6 +45,9 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/storefront', storefrontRoutes);
 
+app.get('/', (req, res) => {
+    res.send('Grocery Management Service is running');
+});
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.use((req, res) => res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` }));
