@@ -29,12 +29,12 @@ export default function ProductCard({ product, inCart, adding, onAddToCart, onDe
       <div className="flex flex-col flex-1">
         <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
           <span className="bg-gray-100 px-2 py-1 rounded-md">{product.groceryType}</span>
-          <span className={product.stockQuantity > 0 ? "text-emerald-600" : "text-red-500"}>
+          <span className={product.stockQuantity > 0 ? "text-green-500" : "text-red-500"}>
             {product.stockQuantity > 0 ? "In Stock" : "Out of Stock"}
           </span>
         </div>
 
-        <h4 className="font-bold text-gray-900 leading-tight mb-1 group-hover:text-emerald-600 transition-colors line-clamp-2">
+        <h4 className="font-bold text-gray-900 leading-tight mb-1 group-hover:text-green-500 transition-colors line-clamp-2">
           {product.name}
         </h4>
 
@@ -63,7 +63,7 @@ export default function ProductCard({ product, inCart, adding, onAddToCart, onDe
             <div className="flex items-center justify-between bg-emerald-50 rounded-xl p-1">
               <button onClick={() => onDecrement(product._id)} className="w-10 h-10 rounded-lg flex items-center justify-center text-emerald-700 bg-white shadow-sm hover:bg-emerald-100">-</button>
               <span className="font-black text-emerald-900 w-8 text-center">{inCart.quantity}</span>
-              <button onClick={() => onAddToCart(payload)} className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-emerald-600 shadow-sm hover:bg-emerald-700">+</button>
+              <button onClick={() => onAddToCart(payload)} className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-green-500 shadow-sm hover:bg-emerald-700">+</button>
             </div>
           ) : (
             <button
@@ -72,7 +72,7 @@ export default function ProductCard({ product, inCart, adding, onAddToCart, onDe
               className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors ${
                 product.stockQuantity <= 0
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
+                  : "bg-green-500 hover:bg-emerald-700 text-white shadow-lg shadow-green-500/20"
               }`}
             >
               <ShoppingCart className="w-4 h-4" />

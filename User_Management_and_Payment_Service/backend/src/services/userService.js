@@ -55,9 +55,27 @@ const uploadAvatar = async (user, file) => {
     return user.avatar;
 };
 
+const updateLocation = async (user, latitude, longitude, address) => {
+    if (!latitude || !longitude) {
+        throw new Error('Latitude and longitude are required');
+    }
+
+    user.location = {
+        latitude,
+        longitude,
+        address: address || 'Location updated',
+        lastUpdated: new Date()
+    };
+
+    await user.save();
+
+    return user.location;
+};
+
 
 module.exports = {
     updateProfile,
     updatePassword,
     uploadAvatar,
+    updateLocation
 };
