@@ -12,10 +12,23 @@ connectDB();
 
 const app = express();
 
+<<<<<<< HEAD
 const allowedOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || '')
   .split(',')
   .map(o => o.trim())
   .filter(Boolean);
+=======
+app.use(cors({
+    origin: function (origin, callback) {
+        if (!origin || origin.startsWith('http://localhost') || origin.includes('vercel.app') || origin === process.env.FRONTEND_URL || origin === process.env.CUSTOMER_FRONTEND_URL) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true
+}));
+>>>>>>> d970dd976c8f7dee1e9c24ddc89ca0752ed870a7
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -44,6 +57,10 @@ sessionSetup(app);
 app.use(passport.initialize());
 app.use(passport.session());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+app.get('/', (req, res) => {
+    res.send('User Management and Payment Service is running');
+});
 
 routes(app);
 

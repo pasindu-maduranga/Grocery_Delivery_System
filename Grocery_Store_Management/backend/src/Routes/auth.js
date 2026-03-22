@@ -10,4 +10,4 @@ router.get('/supplier-me', authenticate, getSupplierMe);
 router.post('/logout', authenticate, logout);
 router.put('/supplier-profile', authenticate, updateSupplierProfile);
 
-module.exports = router;
+module.exports = router;
