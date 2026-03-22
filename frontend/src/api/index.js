@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL
+  baseURL: import.meta.env.VITE_API_URL_ORDER || 'http://localhost:5003/api',
 })
 
 api.interceptors.request.use(cfg => {
@@ -127,4 +127,4 @@ export const storefrontAPI = {
   getById: (id) => api.get(`/storefront/${id}`),
 }
 
-export default api
+export default api

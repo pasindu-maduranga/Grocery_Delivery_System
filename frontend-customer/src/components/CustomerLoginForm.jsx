@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Mail, Lock, ShoppingCart } from "lucide-react";
+import { Mail, Lock, ShoppingCart, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -11,10 +10,38 @@ const CustomerLoginForm = () => {
     password: "",
   });
   const [loading, setLoading] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // Get user's current location
+  const getUserLocation = async () => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        toast.error("Geolocation not supported by your browser");
+        resolve(null);
+        return;
+      }
+
+      setLocationLoading(true);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          resolve({ latitude, longitude });
+          setLocationLoading(false);
+        },
+        (error) => {
+          console.log("Location error:", error);
+          toast.warning("Unable to access location. Proceeding without it.");
+          resolve(null);
+          setLocationLoading(false);
+        },
+        { timeout: 10000 }
+      );
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -27,10 +54,24 @@ const CustomerLoginForm = () => {
 
     setLoading(true);
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/login`, {
+      // Get location before login
+      const location = await getUserLocation();
+
+      const loginPayload = {
         email: formData.email,
         password: formData.password,
-      });
+      };
+
+      // Add location to payload if available
+      if (location) {
+        loginPayload.latitude = location.latitude;
+        loginPayload.longitude = location.longitude;
+      }
+
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL}/auth/login`,
+        loginPayload
+      );
 
       // Save token to localStorage
       localStorage.setItem("token", res.data.token);
@@ -133,10 +174,10 @@ const CustomerLoginForm = () => {
             {/* Submit */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || locationLoading}
               className="w-full bg-green-500 hover:bg-green-600 active:bg-green-700 disabled:bg-green-300 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-md shadow-green-200 hover:shadow-lg hover:shadow-green-300 mt-2"
             >
-              {loading ? "Signing In..." : "Sign In"}
+              {locationLoading ? "Getting Location..." : loading ? "Signing In..." : "Sign In"}
             </button>
           </form>
 

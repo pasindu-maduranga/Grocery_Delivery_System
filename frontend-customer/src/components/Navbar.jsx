@@ -7,8 +7,8 @@ import {
   LayoutDashboard,
   Menu,
   X,
-  ShoppingBag,
   Package,
+  Leaf
 } from "lucide-react";
 
 const Navbar = ({ cartCount = 0 }) => {
@@ -41,10 +41,10 @@ const Navbar = ({ cartCount = 0 }) => {
           {/* Logo */}
           <Link to="/dashboard" className="flex items-center gap-2">
             <div className="w-9 h-9 bg-green-500 rounded-xl flex items-center justify-center shadow-md shadow-green-200">
-              <ShoppingBag className="w-5 h-5 text-white" />
+              <Leaf className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold text-gray-800">
-              Rapid<span className="text-green-500">Cart</span>
+              Fresh<span className="text-green-500">Cart</span>
             </span>
           </Link>
 

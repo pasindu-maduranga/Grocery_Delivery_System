@@ -12,11 +12,11 @@ export default function CategoryChips({ categories, selectedCategory, onSelect }
               onClick={() => onSelect(cat.name)}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-full border whitespace-nowrap transition-all ${
                 isSelected
-                  ? "bg-emerald-700 border-emerald-700 text-white shadow-lg"
+                  ? "bg-green-700 border-green-700 text-white shadow-lg"
                   : "bg-white border-gray-200 text-gray-600 hover:border-emerald-500"
               }`}
             >
-              {Icon && <Icon className={`w-4 h-4 ${isSelected ? "text-white" : "text-emerald-600"}`} />}
+              {Icon && <Icon className={`w-4 h-4 ${isSelected ? "text-white" : "text-green-500"}`} />}
               <span className="text-sm font-bold">{cat.name}</span>
             </button>
           );

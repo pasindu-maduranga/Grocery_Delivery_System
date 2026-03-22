@@ -15,6 +15,7 @@ const driverSchema = new mongoose.Schema({
     default: 20
   },
   licensePlate: { type: String },
+  profilePhoto: { type: String, default: '' },   // NEW: profile photo URL
   isAvailable: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
   currentLocation: {
