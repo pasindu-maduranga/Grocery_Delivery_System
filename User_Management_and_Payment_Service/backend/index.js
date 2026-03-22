@@ -6,6 +6,7 @@ const routes = require('./src/routes/indexRoutes');
 const sessionSetup = require('./src/services/sessionSetup');
 const passport = require('./src/utils/passportUtils');
 const cors = require('cors');
+const fs = require('fs');
 
 connectDB();
 
@@ -24,16 +25,24 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+const uploadsRoot = path.join(__dirname, 'uploads');
+const avatarsDir = path.join(uploadsRoot, 'avatars');
+if (!fs.existsSync(uploadsRoot)) fs.mkdirSync(uploadsRoot, { recursive: true });
+if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir, { recursive: true });
+
 sessionSetup(app);
 
 app.use(passport.initialize());
 app.use(passport.session());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/', (req, res) => {
     res.send('User Management and Payment Service is running');
 });
 
 routes(app);
+
 
 const PORT = process.env.PORT || 5003
 if (!process.env.VERCEL) {

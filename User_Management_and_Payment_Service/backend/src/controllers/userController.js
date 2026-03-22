@@ -55,21 +55,18 @@ const updatePassword = async (req, res) => {
 
 
 const uploadAvatar = async (req, res) => {
-    try {
-        const avatarUrl = await userService.uploadAvatar(
-            req.user,
-            req.file
-        );
-        res.status(200).json({
-            success: true,
-            avatarUrl
-        });
-    } catch (error) {
-        res.status(400).json({
-            success: false,
-            message: error.message
-        });
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
+
+    const avatarUrl = `/uploads/avatars/${req.file.filename}`; // correct public URL path
+    // ...save avatarUrl to DB for req.user...
+
+    return res.status(200).json({ success: true, avatarUrl });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 // Get user dashboard data
@@ -101,11 +98,36 @@ const getOrders = async (req, res) => {
     }
 };
 
+const updateLocation = async (req, res) => {
+    try {
+        const { latitude, longitude, address } = req.body;
+
+        const location = await userService.updateLocation(
+            req.user,
+            latitude,
+            longitude,
+            address
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Location updated successfully',
+            location
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     getProfile,
     updateProfile,
     updatePassword,
     uploadAvatar,
     getDashboard,
-    getOrders
+    getOrders,
+    updateLocation,
 };
