@@ -245,4 +245,4 @@ const buildFilteredSidebar = async (viewableScreenCodes) => {
   return result;
 };
 
-module.exports = { login, supplierLogin, getMe, getSupplierMe, logout, updateSupplierProfile };
+module.exports = { login, supplierLogin, getMe, getSupplierMe, logout, updateSupplierProfile };

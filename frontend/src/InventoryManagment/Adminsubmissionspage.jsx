@@ -10,9 +10,6 @@ import {
 } from 'lucide-react'
 import React from 'react'
 import { toast } from 'sonner'
-import { loadStripe } from '@stripe/stripe-js'
-
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
 
 const STATUS_STYLES = {
   pending:  { color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', dot: 'bg-amber-400', label: 'Pending' },
@@ -427,4 +424,4 @@ export default function AdminSubmissionsPage() {
       </Modal>
     </Layout>
   )
-}
+}
