@@ -4,7 +4,7 @@ const multer = require('multer');
 const userController = require('../controllers/userController');
 const authMiddleware = require('../middleware/authMiddleware');
 const upload = multer({
-    dest: '/uploads'
+    dest: '/tmp'
 });
 
 //Protected user routes

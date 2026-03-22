@@ -29,6 +29,10 @@ sessionSetup(app);
 app.use(passport.initialize());
 app.use(passport.session());
 
+app.get('/', (req, res) => {
+    res.send('User Management and Payment Service is running');
+});
+
 routes(app);
 
 const PORT = process.env.PORT || 5003
