@@ -802,7 +802,7 @@ function StatusPill({ running, label }) {
   return (
     <div style={{ display:'flex', alignItems:'center', gap:7, marginTop:12,
                   padding:'8px 12px', borderRadius:10,
-                  background: running?'#f0fdf4':'#f9fafb',
+                  background: running?'#f0fdf4':'#f6f6f6',
                   border:`1px solid ${running?'#d1fae5':'#e5e7eb'}` }}>
       <div style={{ position:'relative', width:8, height:8, flexShrink:0 }}>
         {running && <div style={{ position:'absolute', inset:0, borderRadius:'50%',
@@ -810,7 +810,7 @@ function StatusPill({ running, label }) {
         <div style={{ position:'relative', width:8, height:8, borderRadius:'50%',
                       background: running?'#10b981':'#9ca3af' }} />
       </div>
-      <span style={{ fontSize:11, color: running?'#065f46':'#6b7280', fontWeight:700 }}>{label}</span>
+      <span style={{ fontSize:11, color: running?'#065f46':'#5e636d', fontWeight:700 }}>{label}</span>
     </div>
   );
 }
