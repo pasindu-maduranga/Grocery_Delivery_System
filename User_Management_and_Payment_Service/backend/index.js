@@ -37,6 +37,10 @@ app.use(passport.initialize());
 app.use(passport.session());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+app.get('/', (req, res) => {
+    res.send('User Management and Payment Service is running');
+});
+
 routes(app);
 
 
