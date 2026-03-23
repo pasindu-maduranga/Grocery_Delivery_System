@@ -77,6 +77,13 @@ const parentMenus = [
     order: 7,
     isSuperAdminOnly: false,
   },
+  {
+    name: 'Order Management',
+    code: 'ORDER_MANAGEMENT',
+    icon: 'shopping-bag',
+    order: 9,
+    isSuperAdminOnly: false,
+  },
 ];
 
 // ─── MENUS ────────────────────────────────────────────────────────
@@ -187,6 +194,15 @@ const menus = [
     code: 'TRANSACTIONS',
     parentMenuCode: 'PAYMENT_LOGS',
     icon: 'credit-card',
+    order: 1,
+  },
+
+  // ── Order Management ──
+  {
+    name: 'Orders',
+    code: 'ORDERS_MENU',
+    parentMenuCode: 'ORDER_MANAGEMENT',
+    icon: 'list',
     order: 1,
   },
 ];
@@ -405,6 +421,24 @@ const screens = [
     route: '/inventory',
     description: 'Admin: manage stock levels, set min/max/reorder and alert suppliers',
     order: 1,
+  },
+
+  // ── Order Management ──
+  {
+    name: 'All Orders',
+    code: 'SCREEN_ORDERS',
+    menuCode: 'ORDERS_MENU',
+    route: '/orders',
+    description: 'Admin: view all customer orders and basic stats',
+    order: 1,
+  },
+  {
+    name: 'Order Details',
+    code: 'SCREEN_ORDER_DETAIL',
+    menuCode: 'ORDERS_MENU',
+    route: '/orders/:id',
+    description: 'Admin: View order details and update status',
+    order: 2,
   },
 ];
 

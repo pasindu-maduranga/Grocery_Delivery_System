@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+const apiUrl = (path) => `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+
 export const useUserProfile = () => {
   const [profile, setProfile] = useState({});
   const [passwords, setPasswords] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
@@ -14,7 +17,7 @@ export const useUserProfile = () => {
   const fetchProfile = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5003/api/user", {
+      const res = await fetch(apiUrl("/user"), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch profile");
@@ -33,7 +36,7 @@ export const useUserProfile = () => {
     try {
       setLoading((prev) => ({ ...prev, update: true }));
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5003/api/user/update-profile", {
+      const res = await fetch(apiUrl("/user/update-profile"), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -57,7 +60,7 @@ export const useUserProfile = () => {
     try {
       setLoading((prev) => ({ ...prev, update: true }));
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5003/api/user/update-password", {
+      const res = await fetch(apiUrl("/user/update-password"), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -87,7 +90,7 @@ export const useUserProfile = () => {
       setLoading((prev) => ({ ...prev, avatar: true }));
 
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5003/api/user/avatar", {
+      const res = await fetch(apiUrl("/user/avatar"), {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -98,7 +101,7 @@ export const useUserProfile = () => {
       if (!res.ok) throw new Error("Avatar upload failed");
 
       const data = await res.json();
-      setAvatarPreview(`http://localhost:5003${data.avatarUrl}`);
+      setAvatarPreview(data.avatarUrl?.startsWith("http") ? data.avatarUrl : apiUrl(data.avatarUrl));
       toast.success("Avatar updated");
     } catch (err) {
       console.error(err);

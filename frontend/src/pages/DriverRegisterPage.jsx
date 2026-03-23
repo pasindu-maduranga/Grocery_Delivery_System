@@ -1,10 +1,12 @@
 // src/pages/DriverRegisterPage.jsx
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { driverApi } from '../api/deliveryApi';
 
 const VEHICLE_TYPES = ['Car', 'Motorcycle', 'Van', 'Scooter'];
 
 export default function DriverRegisterPage({ onRegistered }) {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     userId: '', name: '', email: '', phone: '',
     vehicleType: 'Car', licensePlate: '', maxCarryWeightKg: 20,
@@ -20,8 +22,21 @@ export default function DriverRegisterPage({ onRegistered }) {
     setLoading(true); setError('');
     try {
       const res = await driverApi.register(form);
+      const driver = res.driver || res;
+
+      // ✅ Save driver ID to localStorage
+      localStorage.setItem('fc_driver_id', driver._id);
+
       setSuccess(true);
-      setTimeout(() => onRegistered?.(res.driver), 1200);
+
+      // ✅ Call parent callback if provided
+      onRegistered?.(driver);
+
+      // ✅ Navigate to driver dashboard after 1.5s
+      setTimeout(() => {
+        navigate('/driver/dashboard');
+      }, 1500);
+
     } catch (err) {
       setError(err.message);
     } finally {
@@ -31,6 +46,7 @@ export default function DriverRegisterPage({ onRegistered }) {
 
   return (
     <div style={styles.page}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       {/* Left panel - branding */}
       <div style={styles.hero}>
         <div style={styles.leaf}>🌿</div>
@@ -56,8 +72,16 @@ export default function DriverRegisterPage({ onRegistered }) {
 
           {success ? (
             <div style={styles.successBanner}>
-              <span style={{ fontSize: 32 }}>✅</span>
-              <p style={{ margin: '8px 0 0', color: '#065f46', fontWeight: 600 }}>Registered Successfully!</p>
+              <span style={{ fontSize: 48 }}>✅</span>
+              <p style={{ margin: '12px 0 4px', color: '#065f46', fontWeight: 800, fontSize: 18 }}>
+                Registered Successfully!
+              </p>
+              <p style={{ margin: 0, color: '#6b7280', fontSize: 14 }}>
+                Redirecting to your dashboard…
+              </p>
+              <div style={{ marginTop: 16, width: 40, height: 40, border: '4px solid #d1fae5',
+                            borderTop: '4px solid #047857', borderRadius: '50%',
+                            animation: 'spin 0.8s linear infinite', margin: '16px auto 0' }} />
             </div>
           ) : (
             <form onSubmit={submit} style={styles.form}>

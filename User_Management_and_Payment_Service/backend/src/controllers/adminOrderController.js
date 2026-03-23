@@ -30,7 +30,7 @@ const updateOrderStatus = async (req, res) => {
         const { orderId } = req.params;
         const { status } = req.body;
 
-        const validStatuses = ["placed", "confirmed", "processed", "shipped", "out for delivery", "delivered", "cancelled"];
+        const validStatuses = ["placed", "confirmed", "processed", "prepared", "shipped", "pickup", "out for delivery", "delivered", "cancelled"];
         if (!validStatuses.includes(status)) {
             return res.status(400).json({ success: false, message: 'Invalid status' });
         }
