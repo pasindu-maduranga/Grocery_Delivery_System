@@ -12,15 +12,8 @@ const app = express();
 // ✅ CONNECT DATABASE
 connectDB();
 
-// ✅ CORS — allow frontend on both 5173 and 5174
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174'],
-  credentials: true
-}));
-
-// Middleware
-const cors = require('cors');
-app.use(cors({
+// ✅ CORS — unified project-standard CORS options
+const corsOptions = {
   origin: function (origin, callback) {
     if (!origin || origin.startsWith('http://localhost') || origin.includes('vercel.app') || origin === process.env.FRONTEND_URL || origin === process.env.CUSTOMER_FRONTEND_URL) {
       callback(null, true);
@@ -29,7 +22,9 @@ app.use(cors({
     }
   },
   credentials: true
-}));
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
