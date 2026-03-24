@@ -1,19 +1,15 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5003/api",
 });
 
-// Attach token automatically to every request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Redirect to login if token expired
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -26,6 +22,14 @@ api.interceptors.response.use(
   }
 );
 
-export const getOrders = () => api.get("/user/orders");
+// force non-cached request
+export const getOrders = () =>
+  api.get("/user/orders", {
+    params: { _t: Date.now() },
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    },
+  });
 
 export default api;

@@ -63,15 +63,21 @@ export const useCart = () => {
     }
   };
 
-  const handleDecrement = async (product) => {
-    setAddingId(product.id);
+  const handleDecrement = async (productOrId) => {
+    const productId =
+      typeof productOrId === "string"
+        ? productOrId
+        : productOrId?._id || productOrId?.id || productOrId?.productId;
+
+    if (!productId) return;
+    setAddingId(productId);
     try {
-      const existing = cartItems.find((i) => i.productId === product.id);
+      const existing = cartItems.find((i) => i.productId === productId);
       if (!existing) return;
       const newQty = existing.qty - 1;
-      const res = await updateCartItemQty(product.id, newQty);
+      const res = await updateCartItemQty(productId, newQty);
       setCartItems(res.data.cart.items);
-      toast.success(newQty === 0 ? `${product.name} removed!` : `${product.name} quantity updated!`);
+      toast.success(newQty === 0 ? `${name} removed!` : `${name} quantity updated!`);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to update cart");
     } finally {

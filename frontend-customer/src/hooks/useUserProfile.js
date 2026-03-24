@@ -1,13 +1,23 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
-const apiUrl = (path) => `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+import api from "../api/userApi";
 
 export const useUserProfile = () => {
   const [profile, setProfile] = useState({});
-  const [passwords, setPasswords] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
-  const [loading, setLoading] = useState({ fetch: true, update: false, avatar: false });
+  const [passwords, setPasswords] = useState({
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  // match what UserProfile.jsx is using
+  const [loading, setLoading] = useState({
+    fetch: true,
+    profile: false,
+    password: false,
+    avatar: false,
+  });
+
   const [avatarPreview, setAvatarPreview] = useState("");
 
   useEffect(() => {
@@ -16,17 +26,13 @@ export const useUserProfile = () => {
 
   const fetchProfile = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(apiUrl("/user"), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Failed to fetch profile");
-      const data = await res.json();
-      setProfile(data.user || data);
-      setAvatarPreview(data.user?.avatar || data.avatar || "");
+      const res = await api.get("/user");
+      const user = res.data?.user || res.data || {};
+      setProfile(user);
+      setAvatarPreview(user.avatar || "");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to load profile");
+      toast.error(err?.response?.data?.message || "Failed to load profile");
     } finally {
       setLoading((prev) => ({ ...prev, fetch: false }));
     }
@@ -34,48 +40,51 @@ export const useUserProfile = () => {
 
   const handleProfileUpdate = async (updatedData) => {
     try {
-      setLoading((prev) => ({ ...prev, update: true }));
-      const token = localStorage.getItem("token");
-      const res = await fetch(apiUrl("/user/update-profile"), {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(updatedData),
-      });
-      if (!res.ok) throw new Error("Failed to update profile");
-      const data = await res.json();
-      setProfile(data.user || data);
-      toast.success("Profile updated");
+      setLoading((prev) => ({ ...prev, profile: true }));
+
+      const payload = {
+        name: updatedData?.name ?? "",
+        email: updatedData?.email ?? "",
+        phoneNo: updatedData?.phoneNo ?? updatedData?.phone ?? "",
+        address: updatedData?.address ?? "",
+      };
+
+      const res = await api.put("/user/update-profile", payload);
+      const user = res.data?.user || {};
+
+      setProfile(user);
+
+      // sync header user
+      const existing = JSON.parse(localStorage.getItem("user") || "{}");
+      localStorage.setItem("user", JSON.stringify({ ...existing, ...user }));
+      window.dispatchEvent(new Event("user-updated"));
+
+      toast.success(res.data?.message || "Profile updated");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to update profile");
+      toast.error(err?.response?.data?.message || "Failed to update profile");
     } finally {
-      setLoading((prev) => ({ ...prev, update: false }));
+      setLoading((prev) => ({ ...prev, profile: false }));
     }
   };
 
   const handlePasswordUpdate = async (passwordData) => {
     try {
-      setLoading((prev) => ({ ...prev, update: true }));
-      const token = localStorage.getItem("token");
-      const res = await fetch(apiUrl("/user/update-password"), {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(passwordData),
-      });
-      if (!res.ok) throw new Error("Failed to update password");
-      toast.success("Password updated");
+      setLoading((prev) => ({ ...prev, password: true }));
+
+      const payload = {
+        currentPassword: passwordData?.oldPassword,
+        newPassword: passwordData?.newPassword,
+      };
+
+      const res = await api.put("/user/update-password", payload);
+      toast.success(res.data?.message || "Password updated");
       setPasswords({ oldPassword: "", newPassword: "", confirmPassword: "" });
     } catch (err) {
       console.error(err);
-      toast.error("Failed to update password");
+      toast.error(err?.response?.data?.message || "Failed to update password");
     } finally {
-      setLoading((prev) => ({ ...prev, update: false }));
+      setLoading((prev) => ({ ...prev, password: false }));
     }
   };
 
@@ -89,23 +98,17 @@ export const useUserProfile = () => {
     try {
       setLoading((prev) => ({ ...prev, avatar: true }));
 
-      const token = localStorage.getItem("token");
-      const res = await fetch(apiUrl("/user/avatar"), {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
+      const res = await api.patch("/user/avatar", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
-      if (!res.ok) throw new Error("Avatar upload failed");
+      const newUrl = res.data?.avatarUrl || "";
+      if (newUrl) setAvatarPreview(newUrl);
 
-      const data = await res.json();
-      setAvatarPreview(data.avatarUrl?.startsWith("http") ? data.avatarUrl : apiUrl(data.avatarUrl));
       toast.success("Avatar updated");
     } catch (err) {
       console.error(err);
-      toast.error("Avatar upload failed");
+      toast.error(err?.response?.data?.message || "Avatar upload failed");
     } finally {
       setLoading((prev) => ({ ...prev, avatar: false }));
     }

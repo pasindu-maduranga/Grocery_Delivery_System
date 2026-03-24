@@ -1,6 +1,7 @@
 const userService = require('../services/userService');
 const filterUserFields = require('./filterUserController');
 const Order = require('../models/OrderModel');
+const mongoose = require("mongoose");
 
 const getProfile = async (req, res) => {
     try {
@@ -21,7 +22,7 @@ const updateProfile = async (req, res) => {
         res.status(200).json({
             success: true,
             message: 'Profile updated successfully',
-            user
+            user: filterUserFields(user)
         });
     } catch (error) {
         res.status(400).json({
@@ -30,7 +31,6 @@ const updateProfile = async (req, res) => {
         });
     }
 };
-
 
 const updatePassword = async (req, res) => {
     try {
@@ -87,14 +87,69 @@ const getDashboard = async (req, res) => {
 // Get user orders
 const getOrders = async (req, res) => {
     try {
-        const orders = await Order.find({ userId: req.user._id }).sort({ createdAt: -1 });
-        res.status(200).json({
+        // prevent 304/cache for orders
+        res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+        res.set("Pragma", "no-cache");
+        res.set("Expires", "0");
+        res.set("Surrogate-Control", "no-store");
+
+        const rawIds = [
+            req.user?.id,
+            req.user?.userId,
+            req.user?._id,
+            req.user?.sub,
+            req.user?.user?._id,
+        ].filter(Boolean);
+
+        const rawEmails = [
+            req.user?.email,
+            req.user?.user?.email,
+        ].filter(Boolean);
+
+        const ids = [...new Set(rawIds.map((v) => String(v)))];
+        const emails = [...new Set(rawEmails.map((v) => String(v).toLowerCase()))];
+
+        const or = [];
+
+        ids.forEach((id) => {
+            // common flat fields
+            or.push({ userId: id }, { customerId: id }, { user: id }, { createdBy: id });
+            // common nested fields
+            or.push(
+                { "customer.id": id },
+                { "customer.userId": id },
+                { "user.id": id },
+                { "user._id": id }
+            );
+
+            if (mongoose.Types.ObjectId.isValid(id)) {
+                const oid = new mongoose.Types.ObjectId(id);
+                or.push({ userId: oid }, { customerId: oid }, { user: oid }, { createdBy: oid });
+                or.push({ "customer.id": oid }, { "customer.userId": oid }, { "user._id": oid });
+            }
+        });
+
+        emails.forEach((email) => {
+            or.push(
+                { email },
+                { userEmail: email },
+                { customerEmail: email },
+                { "customer.email": email },
+                { "user.email": email }
+            );
+        });
+
+        const query = or.length ? { $or: or } : {};
+        const orders = await Order.find(query).sort({ createdAt: -1 }).lean();
+
+        return res.status(200).json({
             success: true,
-            orders
+            count: orders.length,
+            orders,
         });
     } catch (error) {
-        console.error('Get orders error:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error("getOrders error:", error);
+        return res.status(500).json({ success: false, message: "Failed to fetch orders" });
     }
 };
 
