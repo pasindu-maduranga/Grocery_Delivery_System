@@ -14,7 +14,7 @@ const deliverySchema = new mongoose.Schema({
     ref: 'Driver',
     default: null 
   },
-  storeLocation: {           // was: restaurantLocation
+  storeLocation: {          
     type: { type: String, default: 'Point' },
     coordinates: [Number]
   },
