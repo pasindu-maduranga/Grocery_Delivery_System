@@ -86,71 +86,25 @@ const getDashboard = async (req, res) => {
 
 // Get user orders
 const getOrders = async (req, res) => {
-    try {
-        // prevent 304/cache for orders
-        res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-        res.set("Pragma", "no-cache");
-        res.set("Expires", "0");
-        res.set("Surrogate-Control", "no-store");
+  try {
+    const userId = req.user._id; // comes from authMiddleware
 
-        const rawIds = [
-            req.user?.id,
-            req.user?.userId,
-            req.user?._id,
-            req.user?.sub,
-            req.user?.user?._id,
-        ].filter(Boolean);
+    const orders = await Order.find({ userId })
+      .sort({ createdAt: -1 })
+      .lean();
 
-        const rawEmails = [
-            req.user?.email,
-            req.user?.user?.email,
-        ].filter(Boolean);
-
-        const ids = [...new Set(rawIds.map((v) => String(v)))];
-        const emails = [...new Set(rawEmails.map((v) => String(v).toLowerCase()))];
-
-        const or = [];
-
-        ids.forEach((id) => {
-            // common flat fields
-            or.push({ userId: id }, { customerId: id }, { user: id }, { createdBy: id });
-            // common nested fields
-            or.push(
-                { "customer.id": id },
-                { "customer.userId": id },
-                { "user.id": id },
-                { "user._id": id }
-            );
-
-            if (mongoose.Types.ObjectId.isValid(id)) {
-                const oid = new mongoose.Types.ObjectId(id);
-                or.push({ userId: oid }, { customerId: oid }, { user: oid }, { createdBy: oid });
-                or.push({ "customer.id": oid }, { "customer.userId": oid }, { "user._id": oid });
-            }
-        });
-
-        emails.forEach((email) => {
-            or.push(
-                { email },
-                { userEmail: email },
-                { customerEmail: email },
-                { "customer.email": email },
-                { "user.email": email }
-            );
-        });
-
-        const query = or.length ? { $or: or } : {};
-        const orders = await Order.find(query).sort({ createdAt: -1 }).lean();
-
-        return res.status(200).json({
-            success: true,
-            count: orders.length,
-            orders,
-        });
-    } catch (error) {
-        console.error("getOrders error:", error);
-        return res.status(500).json({ success: false, message: "Failed to fetch orders" });
-    }
+    res.status(200).json({
+      success: true,
+      count: orders.length,
+      orders,
+    });
+  } catch (error) {
+    console.error("getOrders error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch orders",
+    });
+  }
 };
 
 const updateLocation = async (req, res) => {

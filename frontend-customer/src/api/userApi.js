@@ -22,14 +22,7 @@ api.interceptors.response.use(
   }
 );
 
-// force non-cached request
-export const getOrders = () =>
-  api.get("/user/orders", {
-    params: { _t: Date.now() },
-    headers: {
-      "Cache-Control": "no-cache",
-      Pragma: "no-cache",
-    },
-  });
+// ✅ no custom Cache-Control/Pragma headers (avoid CORS preflight block)
+export const getOrders = () => api.get("/user/orders");
 
 export default api;
