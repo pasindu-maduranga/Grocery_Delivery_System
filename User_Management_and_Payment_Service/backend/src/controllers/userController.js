@@ -1,6 +1,7 @@
 const userService = require('../services/userService');
 const filterUserFields = require('./filterUserController');
 const Order = require('../models/OrderModel');
+const mongoose = require("mongoose");
 
 const getProfile = async (req, res) => {
     try {
@@ -21,7 +22,7 @@ const updateProfile = async (req, res) => {
         res.status(200).json({
             success: true,
             message: 'Profile updated successfully',
-            user
+            user: filterUserFields(user)
         });
     } catch (error) {
         res.status(400).json({
@@ -30,7 +31,6 @@ const updateProfile = async (req, res) => {
         });
     }
 };
-
 
 const updatePassword = async (req, res) => {
     try {
@@ -86,16 +86,25 @@ const getDashboard = async (req, res) => {
 
 // Get user orders
 const getOrders = async (req, res) => {
-    try {
-        const orders = await Order.find({ userId: req.user._id }).sort({ createdAt: -1 });
-        res.status(200).json({
-            success: true,
-            orders
-        });
-    } catch (error) {
-        console.error('Get orders error:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
+  try {
+    const userId = req.user._id; // comes from authMiddleware
+
+    const orders = await Order.find({ userId })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      count: orders.length,
+      orders,
+    });
+  } catch (error) {
+    console.error("getOrders error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch orders",
+    });
+  }
 };
 
 const updateLocation = async (req, res) => {
