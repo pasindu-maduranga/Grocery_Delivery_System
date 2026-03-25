@@ -1,7 +1,10 @@
 services:
   # Grocery Store Management Backend
   grocery-backend:
-    build: ./Grocery_Store_Management/backend/src
+    build: 
+      context: ./Grocery_Store_Management/backend/src
+      args:
+        - PORT=5000
     container_name: grocery-store-backend
     ports:
       - "5000:5000"
@@ -36,9 +39,25 @@ services:
     restart: unless-stopped
     networks:
       - grocery-network
+
+  # Order & Notification Management
+  order-service:
+    build: ./Order_and_Notification_Management/backend
+    container_name: order-service
+    ports:
+      - "5004:5004"
+    env_file:
+      - ./Order_and_Notification_Management/backend/.env
+    restart: unless-stopped
+    networks:
+      - grocery-network
   # Admin Frontend
   admin-frontend:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      args:
+        - VITE_API_URL=http://localhost:5000/api
+        - VITE_API_URL_ORDER=http://localhost:5004/api
     container_name: admin-dashboard
     ports:
       - "5173:80"
@@ -48,7 +67,12 @@ services:
 
   # Customer Frontend
   customer-frontend:
-    build: ./frontend-customer
+    build: 
+      context: ./frontend-customer
+      args:
+        - VITE_API_URL=http://localhost:5003/api
+        - VITE_API_URL_GROCERY_MANAGEMENT_SERVICE=http://localhost:5000/api
+        - VITE_STRIPE_PUBLISHABLE_KEY=pk_test_51T8FA0CHMdOpXSyUdEp5T6KaDuOecXRk4IfE8Hqf15trW1kIOaXW0iyMvYOXJ7UhKyLYKXv1kInx2VQxXgiav2aU00tsvkgszS
     container_name: customer-app
     ports:
       - "5174:80"
