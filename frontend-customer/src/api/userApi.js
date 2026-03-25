@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5003/api",
+  baseURL: import.meta.env.VITE_API_URL || "https://user-payment-service.livelyforest-bef090db.eastus.azurecontainerapps.io/api",
 });
 
 api.interceptors.request.use((config) => {

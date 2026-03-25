@@ -11,7 +11,7 @@ const CartEmptyState = () => (
 
     <Link
       to="/dashboard"
-      className="inline-flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold px-6 py-3 rounded-xl transition-all shadow-lg shadow-green-200"
+      className="inline-flex items-center gap-2 bg-linear-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold px-6 py-3 rounded-xl transition-all shadow-lg shadow-green-200"
     >
       <Sparkles className="w-4 h-4" />
       Browse Products
