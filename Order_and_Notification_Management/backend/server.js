@@ -7,10 +7,18 @@ connectDB();
 
 const app = express();
 
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5000', 'http://localhost:5003', process.env.FRONTEND_URL, process.env.CUSTOMER_FRONTEND_URL].filter(Boolean),
-  credentials: true,
-}));
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || origin.startsWith('http://localhost') || origin.includes('vercel.app') || origin === process.env.FRONTEND_URL || origin === process.env.CUSTOMER_FRONTEND_URL) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

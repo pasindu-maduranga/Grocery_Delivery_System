@@ -78,7 +78,7 @@ export default function CustomerShopPage() {
         cartCount={cartCount}
       />
 
-      <main className="max-w-[1400px] mx-auto px-6 py-8 flex flex-col lg:flex-row gap-10">
+      <main className="max-w-350 mx-auto px-6 py-8 flex flex-col lg:flex-row gap-10">
         <ShopSidebarFilters filters={filters} setFilters={setFilters} />
 
         <div className="flex-1 min-w-0">

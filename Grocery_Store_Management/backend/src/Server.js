@@ -20,7 +20,7 @@ const app = express();
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || origin.startsWith('http://localhost') || origin.includes('vercel.app') || origin === process.env.FRONTEND_URL || origin === process.env.CUSTOMER_FRONTEND_URL) {
+    if (!origin || origin.startsWith('http://localhost') || origin.includes('vercel.app') || origin === process.env.FRONTEND_URL || origin === process.env.CUSTOMER_FRONTEND_URL || origin === process.env.customer-frontend-url || origin === process.env.frontend-url ) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -49,7 +49,7 @@ app.get('/', (req, res) => {
     res.send('Grocery Management Service is running');
 });
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/api/health', (req, res) => res.json({ status: 'oks' }));
 app.use((req, res) => res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` }));
 app.use((err, req, res, next) => {
   console.error(err.stack);

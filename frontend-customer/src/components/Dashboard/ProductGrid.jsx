@@ -29,6 +29,14 @@ export default function ProductGrid({
     );
   }
 
+  const getCartItemForProduct = (productId) => {
+    const pid = String(productId);
+    return cartItems.find((i) => {
+      const cid = String(i?.productId?._id || i?.productId || i?.id || "");
+      return cid === pid;
+    });
+  };
+
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -36,7 +44,7 @@ export default function ProductGrid({
           <ProductCard
             key={product._id}
             product={product}
-            inCart={cartItems.find((i) => i.productId === product._id)}
+            inCart={getCartItemForProduct(product._id)}
             adding={addingId === product._id}
             onAddToCart={onAddToCart}
             onDecrement={onDecrement}

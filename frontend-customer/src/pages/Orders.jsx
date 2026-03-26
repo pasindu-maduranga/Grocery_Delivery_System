@@ -1,11 +1,15 @@
-import { useState, useEffect } from "react";
-import { ArrowLeft, Package, Loader2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import Navbar from "../components/Navbar";
 import OrderCard from "../components/Orders/OrderCard";
 import OrdersEmptyState from "../components/Orders/OrdersEmptyState";
 import { ORDER_STEPS } from "../constants/orderConstants";
 import { getOrders } from "../api/userApi";
+
+const normalizeStatus = (value = "") =>
+  String(value).toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
 
 const STATUS_FILTERS = ["All", ...ORDER_STEPS.map((s) => s.key)];
 
@@ -14,22 +18,48 @@ const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const res = await getOrders();
-        setOrders(res.data.orders);
-      } catch (err) {
-        console.error("Failed to fetch orders:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchOrders();
+  const fetchOrders = useCallback(async (silent = false) => {
+    try {
+      if (!silent) setLoading(true);
+
+      const res = await getOrders();
+      const data = res?.data;
+
+      const list = Array.isArray(data?.orders)
+        ? data.orders
+        : Array.isArray(data?.data?.orders)
+        ? data.data.orders
+        : Array.isArray(data?.data)
+        ? data.data
+        : Array.isArray(data)
+        ? data
+        : [];
+
+      const normalized = list.map((order) => ({
+        ...order,
+        status: normalizeStatus(order?.status),
+      }));
+
+      setOrders(normalized);
+    } catch (err) {
+      console.error("Failed to fetch orders:", err);
+      if (!silent) toast.error(err?.response?.data?.message || "Failed to load orders");
+      if (!silent) setOrders([]);
+    } finally {
+      if (!silent) setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    fetchOrders(false);
+    const timer = setInterval(() => fetchOrders(true), 15000);
+    return () => clearInterval(timer);
+  }, [fetchOrders]);
+
   const filtered = orders.filter((o) =>
-    activeFilter === "All" ? true : o.status === activeFilter,
+    activeFilter === "All"
+      ? true
+      : normalizeStatus(o.status) === normalizeStatus(activeFilter)
   );
 
   if (loading) {
@@ -48,7 +78,6 @@ const Orders = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-        {/* Header */}
         <div className="flex items-center gap-3 mb-8">
           <Link
             to="/dashboard"
@@ -58,75 +87,37 @@ const Orders = () => {
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">My Orders</h1>
-            <p className="text-sm text-gray-400">
-              {orders.length} total orders
-            </p>
+            <p className="text-sm text-gray-400">{orders.length} total orders</p>
           </div>
         </div>
 
-        {/* Summary Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          {[
-            {
-              label: "Active",
-              count: orders.filter((o) => o.status !== "delivered").length,
-              color: "text-orange-600 bg-orange-50 border-orange-100",
-            },
-            {
-              label: "Delivered",
-              count: orders.filter((o) => o.status === "delivered").length,
-              color: "text-green-600 bg-green-50 border-green-100",
-            },
-            {
-              label: "Total",
-              count: orders.length,
-              color: "text-blue-600 bg-blue-50 border-blue-100",
-            },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className={`rounded-2xl border px-4 py-3 text-center ${stat.color}`}
-            >
-              <p className="text-2xl font-bold">{stat.count}</p>
-              <p className="text-xs font-medium">{stat.label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Filter Pills */}
         <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
           {STATUS_FILTERS.map((filter) => {
             const label =
               filter === "All"
                 ? "All"
-                : ORDER_STEPS.find((s) => s.key === filter)?.label;
-            const isActive = activeFilter === filter;
+                : ORDER_STEPS.find(
+                    (s) => normalizeStatus(s.key) === normalizeStatus(filter)
+                  )?.label || filter;
+
+            const isActive = normalizeStatus(activeFilter) === normalizeStatus(filter);
 
             return (
               <button
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
-                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium border transition-all duration-200
-                  ${
-                    isActive
-                      ? "bg-green-500 text-white border-green-500 shadow-md shadow-green-200"
-                      : "bg-white text-gray-500 border-gray-200 hover:border-green-300 hover:text-green-600"
-                  }`}
+                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium border transition-all duration-200 ${
+                  isActive
+                    ? "bg-green-500 text-white border-green-500 shadow-md shadow-green-200"
+                    : "bg-white text-gray-500 border-gray-200 hover:border-green-300 hover:text-green-600"
+                }`}
               >
                 {label}
-                {filter !== "All" && (
-                  <span
-                    className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/20" : "bg-gray-100"}`}
-                  >
-                    {orders.filter((o) => o.status === filter).length}
-                  </span>
-                )}
               </button>
             );
           })}
         </div>
 
-        {/* Orders List */}
         {filtered.length === 0 ? (
           <OrdersEmptyState />
         ) : (
@@ -134,7 +125,7 @@ const Orders = () => {
             {filtered
               .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
               .map((order) => (
-                <OrderCard key={order._id} order={order} />
+                <OrderCard key={order._id || order.id} order={order} />
               ))}
           </div>
         )}

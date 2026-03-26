@@ -1,19 +1,15 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || "https://user-payment-service.livelyforest-bef090db.eastus.azurecontainerapps.io/api",
 });
 
-// Attach token automatically to every request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Redirect to login if token expired
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -26,6 +22,7 @@ api.interceptors.response.use(
   }
 );
 
+// ✅ no custom Cache-Control/Pragma headers (avoid CORS preflight block)
 export const getOrders = () => api.get("/user/orders");
 
 export default api;

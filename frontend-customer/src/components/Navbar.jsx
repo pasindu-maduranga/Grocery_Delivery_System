@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   ShoppingCart,
@@ -16,11 +16,24 @@ const Navbar = ({ cartCount = 0 }) => {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("user") || "{}"));
+
+  useEffect(() => {
+    const refreshUser = () => setUser(JSON.parse(localStorage.getItem("user") || "{}"));
+
+    window.addEventListener("storage", refreshUser);      // other tabs
+    window.addEventListener("user-updated", refreshUser); // same tab
+
+    return () => {
+      window.removeEventListener("storage", refreshUser);
+      window.removeEventListener("user-updated", refreshUser);
+    };
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    setUser({});
     navigate("/login");
   };
 
