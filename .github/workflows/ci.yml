@@ -1,65 +1,122 @@
-name: CI Pipeline
+name: 🐳 Build & Push Docker Images to ACR
 
 on:
   push:
-    branches: [ "development", "main" ]
+    branches: [ "main", "development" ]
   pull_request:
-    branches: [ "development", "main" ]
+    branches: [ "main" ]
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+# ──────────────────────────────────────────────────────────────────
+# HOW THIS WORKS:
+# 1. You push code to GitHub
+# 2. This pipeline runs automatically on GitHub's servers
+# 3. It builds all 6 Docker images
+# 4. Pushes them to your Azure Container Registry
+# 5. Then you run: .\update-azure.ps1 (takes ~30 seconds)
+#    to tell Azure to use the new images
+# ──────────────────────────────────────────────────────────────────
+
+# These values come from GitHub Secrets (Settings → Secrets → Actions)
+# You need to add TWO secrets:
+#   ACR_USERNAME  = grocerydeliveryacr
+#   ACR_PASSWORD  = (your ACR password from az acr credential show)
+
+env:
+  ACR: grocerydeliveryacr.azurecr.io
+  DOMAIN: redcliff-0ea51bff.eastus.azurecontainerapps.io
 
 jobs:
-  build-frontend:
+  build-and-push:
+    name: 🐳 Build & Push All Images
     runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.x'
-        
-    - name: Install and Build Frontend Admin
-      working-directory: ./frontend
-      run: |
-        npm install
-        npm run build --if-present
-        
-    - name: Install and Build Frontend Customer
-      working-directory: ./frontend-customer
-      run: |
-        npm install
-        npm run build --if-present
 
-  build-backend-delivery:
-    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.x'
-    - name: Install dependencies Wait Delivery
-      working-directory: ./Delivery_Management/backend
-      run: npm install
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
 
-  build-backend-grocery:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.x'
-    - name: Install dependencies Grocery Store
-      working-directory: ./Grocery_Store_Management/backend/src
-      run: npm install
+      - name: 🔑 Login to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
 
-  build-backend-user-payment:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.x'
-    - name: Install dependencies User & Payment
-      working-directory: ./User_Management_and_Payment_Service/backend
-      run: npm install
+      # ── Backend Services ─────────────────────────────────────
+
+      - name: 🏗️ Build & Push grocery-backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./Grocery_Store_Management/backend/src
+          push: true
+          tags: |
+            ${{ env.ACR }}/grocery-backend:latest
+            ${{ env.ACR }}/grocery-backend:${{ github.sha }}
+
+      - name: 🏗️ Build & Push user-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./User_Management_and_Payment_Service/backend
+          push: true
+          tags: |
+            ${{ env.ACR }}/user-service:latest
+            ${{ env.ACR }}/user-service:${{ github.sha }}
+
+      - name: 🏗️ Build & Push delivery-backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./Delivery_Management/backend
+          push: true
+          tags: |
+            ${{ env.ACR }}/delivery-backend:latest
+            ${{ env.ACR }}/delivery-backend:${{ github.sha }}
+
+      - name: 🏗️ Build & Push order-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./Order_and_Notification_Management/backend
+          push: true
+          tags: |
+            ${{ env.ACR }}/order-service:latest
+            ${{ env.ACR }}/order-service:${{ github.sha }}
+
+      # ── Frontend Services ─────────────────────────────────────
+
+      - name: 🏗️ Build & Push admin-frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          build-args: |
+            VITE_API_URL=https://grocery-backend.${{ env.DOMAIN }}/api
+            VITE_API_URL_ORDER=https://order-service.${{ env.DOMAIN }}/api
+          tags: |
+            ${{ env.ACR }}/admin-frontend:latest
+            ${{ env.ACR }}/admin-frontend:${{ github.sha }}
+
+      - name: 🏗️ Build & Push customer-frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend-customer
+          push: true
+          build-args: |
+            VITE_API_URL_USER_MANAGEMENT_SERVICE=https://user-service.${{ env.DOMAIN }}/api
+            VITE_API_URL_GROCERY_MANAGEMENT_SERVICE=https://grocery-backend.${{ env.DOMAIN }}/api
+            VITE_STRIPE_PUBLISHABLE_KEY=${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}
+          tags: |
+            ${{ env.ACR }}/customer-frontend:latest
+            ${{ env.ACR }}/customer-frontend:${{ github.sha }}
+
+      - name: ✅ Summary
+        run: |
+          echo "================================================"
+          echo "✅ All 6 images pushed to ACR!"
+          echo "================================================"
+          echo ""
+          echo "🔜 NEXT STEP: Run update-azure.ps1 on your laptop"
+          echo "   to tell Container Apps to use the new images."
+          echo ""
+          echo "   Command: powershell -File update-azure.ps1"
+          echo ""
+          echo "   Image tag: ${{ github.sha }}"
+          echo "================================================"
