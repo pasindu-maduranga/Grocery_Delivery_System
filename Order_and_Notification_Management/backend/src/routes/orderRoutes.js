@@ -7,6 +7,9 @@ const {
   updateOrderStatus,
   getOrderStats,
   deleteOrder,
+  getReadyOrders,
+  getAvailableDrivers,
+
 } = require('../controllers/orderController');
 const { protect } = require('../middleware/auth');
 
@@ -15,9 +18,12 @@ router.post('/', receiveOrder);
 
 // Protected — admin only
 router.get('/stats', protect, getOrderStats);
+router.get('/ready', protect, getReadyOrders);
+router.get('/drivers/available', protect, getAvailableDrivers);
 router.get('/',     protect, getAllOrders);
 router.get('/:id',  protect, getOrderById);
 router.patch('/:id/status', protect, updateOrderStatus);
 router.delete('/:id', protect, deleteOrder);
+
 
 module.exports = router;

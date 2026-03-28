@@ -40,6 +40,17 @@ exports.getCurrentOrders = async (req, res) => {
   }
 };
 
+exports.assignOrderToDriver = async (req, res) => {
+  try {
+    const { driverId, orderId } = req.body;
+    const result = await driverService.assignOrderToDriver(driverId, orderId);
+    res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    console.error('Error assigning order to driver:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // Update driver availability
 exports.updateAvailability = async (req, res) => {
   try {
@@ -171,6 +182,17 @@ exports.registerDriver = async (req, res) => {
     });
   } catch (error) {
     console.error('Error registering driver:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getAvailableDrivers = async (req, res) => {
+  try {
+    const drivers = await Driver.find({ isAvailable: true, isActive: true })
+      .select('_id name email phone vehicleType licensePlate rating currentLocation');
+    res.status(200).json({ success: true, data: drivers });
+  } catch (error) {
+    console.error('Error getting available drivers:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

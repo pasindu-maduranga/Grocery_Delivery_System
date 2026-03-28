@@ -354,6 +354,19 @@ class OrderIntegrationService {
       return { success: false, order: null };
     }
   }
+
+  async assignDriverToOrder(orderId, driverId) {
+  try {
+    const response = await axios.patch(`${ORDER_SERVICE_URL}/${orderId}/status`, {
+      status: 'out_for_delivery',
+      driverId
+    });
+    return { success: true, order: response.data };
+  } catch (error) {
+    console.error(`[OrderIntegrationService] Error assigning driver for order ${orderId}:`, error.message);
+    return { success: false, order: null };
+  }
+ }
 }
 
 module.exports = new OrderIntegrationService();

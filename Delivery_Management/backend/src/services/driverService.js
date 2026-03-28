@@ -302,6 +302,37 @@ class DriverService {
       throw error;
     }
   }
+
+  async assignOrderToDriver(driverId, orderId) {
+  try {
+    const driver = await Driver.findById(driverId);
+
+    if (!driver) {
+      throw new Error(`Driver with ID ${driverId} not found`);
+    }
+
+    if (!driver.isAvailable || !driver.isActive) {
+      throw new Error('Driver is not available');
+    }
+
+    if (!driver.currentOrders.includes(orderId)) {
+      driver.currentOrders.push(orderId);
+    }
+
+    driver.isAvailable = false;
+    await driver.save();
+
+    const result = await orderIntegrationService.updateOrderStatus(
+      orderId,
+      'out_for_delivery'
+    );
+
+    return { driver, order: result.order };
+  } catch (error) {
+    console.error(`Error assigning order ${orderId} to driver ${driverId}:`, error);
+    throw error;
+  }
+ } 
 }
 
 module.exports = new DriverService();

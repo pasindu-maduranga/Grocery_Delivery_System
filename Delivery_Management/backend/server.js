@@ -12,8 +12,15 @@ const app = express();
 // ✅ CONNECT DATABASE
 connectDB();
 
-// ✅ CORS — unified project-standard CORS options
-const corsOptions = {
+// ✅ CORS — allow frontend on both 5173 and 5174
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:5174'],
+  credentials: true
+}));
+
+// Middleware
+
+app.use(cors({
   origin: function (origin, callback) {
     if (!origin || origin.startsWith('http://localhost') || origin.includes('vercel.app') || origin.includes('azurecontainerapps.io') || origin === process.env.FRONTEND_URL || origin === process.env.CUSTOMER_FRONTEND_URL) {
       callback(null, true);

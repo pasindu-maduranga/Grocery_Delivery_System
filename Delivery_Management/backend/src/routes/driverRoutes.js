@@ -62,4 +62,8 @@ router.post('/:driverId/reject/:orderId', driverController.rejectOrder);
 // Complete delivery
 router.post('/:driverId/complete/:orderId', driverController.completeDelivery);
 
+router.get('/available', driverController.getAvailableDrivers);
+
+router.post('/assign-order', driverController.assignOrderToDriver);
+
 module.exports = router;
