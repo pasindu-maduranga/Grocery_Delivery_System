@@ -20,7 +20,7 @@ const app = express();
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || origin.startsWith('http://localhost') || origin.includes('vercel.app') || origin === process.env.FRONTEND_URL || origin === process.env.CUSTOMER_FRONTEND_URL || origin === process.env.customer-frontend-url || origin === process.env.frontend-url ) {
+    if (!origin || origin.startsWith('http://localhost') || origin.includes('vercel.app') || origin.includes('azurecontainerapps.io') || origin === process.env.FRONTEND_URL || origin === process.env.CUSTOMER_FRONTEND_URL) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));

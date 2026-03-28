@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+dist/
+dist-ssr/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment files - NEVER commit these
+.env
+.env.*
+*.env
+deploy.secrets.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/

@@ -15,7 +15,7 @@ connectDB();
 // ✅ CORS — unified project-standard CORS options
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || origin.startsWith('http://localhost') || origin.includes('vercel.app') || origin === process.env.FRONTEND_URL || origin === process.env.CUSTOMER_FRONTEND_URL) {
+    if (!origin || origin.startsWith('http://localhost') || origin.includes('vercel.app') || origin.includes('azurecontainerapps.io') || origin === process.env.FRONTEND_URL || origin === process.env.CUSTOMER_FRONTEND_URL) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -49,7 +49,13 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:5173', 'http://localhost:5174'],
+    origin: function(origin, callback) {
+      if (!origin || origin.startsWith('http://localhost') || origin.includes('azurecontainerapps.io')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true
   }
 });
