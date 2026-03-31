@@ -1,5 +1,5 @@
 const Order = require('../models/Order');
-const Driver = require('../../../../Delivery_Management/backend/src/models/Driver');
+const Driver = require('../models/Driver');
 
 
 // ─── Receive order from customer service ─────────────────────────────────────
@@ -126,10 +126,10 @@ const updateOrderStatus = async (req, res) => {
       const userMgmtStatus = statusMap[status] || status;
 
       console.log(`[DEBUG] Syncing order ${order.orderId} to status: ${userMgmtStatus}`);
-      console.log(`[DEBUG] Target URL: http://localhost:5003/api/admin/orders/status/${order.orderId}`);
+      const userMgmtBase = process.env.USER_SERVICE_URL || 'http://localhost:5003/api';
+      console.log(`[DEBUG] Target URL: ${userMgmtBase}/admin/orders/status/${order.orderId}`);
 
-      // order.orderId is the _id in the User_Management database
-      const syncRes = await axios.patch(`http://localhost:5003/api/admin/orders/status/${order.orderId}`,
+      const syncRes = await axios.patch(`${userMgmtBase}/admin/orders/status/${order.orderId}`,
         { status: userMgmtStatus },
         { headers: { Authorization: req.headers.authorization } }
       );

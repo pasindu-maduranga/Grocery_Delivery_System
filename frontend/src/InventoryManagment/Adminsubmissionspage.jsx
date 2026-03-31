@@ -5,7 +5,7 @@ import { PageLoader, Spinner, Modal, FormField } from '../components/common/inde
 import { 
   CheckCircle2, XCircle, Clock, Eye, ImageOff, 
   Tag, Package, CreditCard, ArrowRight,
-  TrendingUp, IndianRupee, Info, Search, Filter,
+  TrendingUp, Banknote, Info, Search, Filter,
   Globe, AlertCircle
 } from 'lucide-react'
 import React from 'react'
@@ -343,7 +343,7 @@ export default function AdminSubmissionsPage() {
       <Modal open={paymentModal.open} onClose={() => setPaymentModal({ open: false, sub: null })} title="Payment Authorization" size="sm">
          <div className="p-8 text-center">
             <div className="w-16 h-16 bg-emerald-900 text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
-               <IndianRupee size={32} />
+               <Banknote size={32} />
             </div>
             <h3 className="text-xl font-black text-slate-800 mb-2">LKR {paymentModal.sub?.totalPrice.toLocaleString()}</h3>
             <p className="text-sm text-slate-500 mb-8 leading-relaxed">

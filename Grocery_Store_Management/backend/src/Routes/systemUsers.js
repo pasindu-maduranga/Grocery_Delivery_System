@@ -2,7 +2,7 @@ const express = require('express');
 const userRouter = express.Router();
 const {
   getAllUsers, getUserById, createUser, updateUser,
-  toggleActive, toggleLock, resetPassword,
+  toggleActive, toggleLock, resetPassword, syncAllDrivers,
 } = require('../Controllers/systemUserController');
 const { authenticate, requireSuperAdmin } = require('../Middlewares/Auth');
 
@@ -15,5 +15,6 @@ userRouter.put('/:id', updateUser);
 userRouter.patch('/:id/toggle-active', toggleActive);
 userRouter.patch('/:id/toggle-lock', toggleLock);
 userRouter.patch('/:id/reset-password', resetPassword);
+userRouter.post('/sync-drivers', syncAllDrivers);
 
 module.exports = { userRouter };

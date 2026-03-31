@@ -1,893 +1,340 @@
-// // src/pages/AdminAssignmentPage.jsx
-// import React, { useState } from 'react';
-// import { autoAssignmentApi, assignmentApi } from '../api/deliveryApi';
+import { useState, useEffect, useRef } from 'react'
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet'
+import { PageHeader, Card, Spinner, Badge, Table } from '../components/common'
+import { deliveryApi, driverApi, assignmentApi } from '../api/deliveryApi'
+import { orderApi } from '../api/orderApi'
+import { MapPin, Navigation, User, Clock, CheckCircle, XCircle, ChevronRight, AlertCircle, ShoppingBag, Truck, Store } from 'lucide-react'
+import Layout from '../components/layout/Layout'
+import L from 'leaflet'
+import { toast } from 'sonner'
+import React from 'react'
 
-// export default function AdminAssignmentPage() {
-//   const [autoRunning, setAutoRunning] = useState(false);
-//   const [legacyRunning, setLegacyRunning] = useState(false);
-//   const [logs, setLogs]               = useState([]);
-//   const [intervalMs, setIntervalMs]   = useState(60000);
+// Constants
+const STORE_LOCATION = { lat: 6.9195, lng: 79.8812, name: 'RapidCart Store (Borella)' }
+const TRANSPORT_RATE_PER_KM = 50 // LKR
 
-//   const log = (msg, type = 'info') => {
-//     setLogs(l => [{ msg, type, time: new Date().toLocaleTimeString() }, ...l.slice(0, 99)]);
-//   };
+// Custom marker icons
+const customerIcon = new L.Icon({
+  iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', 
+  iconSize: [35, 35], iconAnchor: [17, 35], popupAnchor: [0, -35]
+})
+const driverOnlineIcon = new L.Icon({
+  iconUrl: 'https://cdn-icons-png.flaticon.com/512/2830/2830305.png', 
+  iconSize: [35, 35], iconAnchor: [17, 35], popupAnchor: [0, -35]
+})
+const driverBusyIcon = new L.Icon({
+  iconUrl: 'https://cdn-icons-png.flaticon.com/128/3126/3126131.png', 
+  iconSize: [35, 35], iconAnchor: [17, 35], popupAnchor: [0, -35]
+})
+const storeIcon = new L.Icon({
+  iconUrl: 'https://cdn-icons-png.flaticon.com/512/869/869636.png', 
+  iconSize: [45, 45], iconAnchor: [22, 45], popupAnchor: [0, -45]
+})
 
-//   const callApi = async (fn, label) => {
-//     try {
-//       log(`→ ${label}…`, 'info');
-//       await fn();
-//       log(`✓ ${label} succeeded`, 'success');
-//     } catch (err) {
-//       log(`✕ ${label} failed: ${err.message}`, 'error');
-//     }
-//   };
-
-//   const stats = [
-//     { icon:'🤖', label:'Auto Engine',    value: autoRunning   ? 'Running' : 'Stopped', color: autoRunning   ? '#065f46' : '#6b7280', bg: autoRunning   ? '#d1fae5' : '#f3f4f6' },
-//     { icon:'⏱',  label:'Legacy Service', value: legacyRunning ? 'Running' : 'Stopped', color: legacyRunning ? '#065f46' : '#6b7280', bg: legacyRunning ? '#d1fae5' : '#f3f4f6' },
-//     { icon:'📋',  label:'Log Entries',   value: logs.length,   color: '#1d4ed8', bg: '#dbeafe' },
-//     { icon:'⚡',  label:'Interval',      value: `${intervalMs/1000}s`,  color: '#7c3aed', bg: '#ede9fe' },
-//   ];
-
-//   return (
-//     <div style={{ minHeight:'100vh', background:'#f0fdf4', fontFamily:"'Nunito',sans-serif" }}>
-//       <style>{`
-//         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-//         @keyframes ping  { 0%{transform:scale(1);opacity:0.8} 100%{transform:scale(2.2);opacity:0} }
-//         @keyframes fadeUp{ from{transform:translateY(8px);opacity:0} to{transform:translateY(0);opacity:1} }
-//         .adm-btn:hover:not(:disabled) { opacity:0.88; transform:translateY(-1px); }
-//         .adm-btn:active:not(:disabled) { transform:translateY(0); }
-//       `}</style>
-
-//       {/* ── HEADER ── */}
-//       <header style={{ background:'linear-gradient(90deg,#052e16,#064e3b)', padding:'14px 32px',
-//                        display:'flex', alignItems:'center', justifyContent:'space-between',
-//                        boxShadow:'0 4px 24px rgba(0,0,0,0.25)', position:'sticky', top:0, zIndex:100 }}>
-//         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-//           <div style={{ width:34, height:34, borderRadius:9, background:'rgba(255,255,255,0.12)',
-//                         display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>🌿</div>
-//           <div>
-//             <div style={{ color:'#fff', fontWeight:900, fontSize:16, letterSpacing:-0.5 }}>FreshCart</div>
-//             <div style={{ color:'#6ee7b7', fontSize:9, fontWeight:700, letterSpacing:2 }}>ADMIN PANEL</div>
-//           </div>
-//           <span style={{ background:'rgba(110,231,183,0.15)', color:'#6ee7b7', fontSize:11,
-//                          fontWeight:700, padding:'4px 12px', borderRadius:20, marginLeft:4,
-//                          border:'1px solid rgba(110,231,183,0.3)' }}>
-//             Assignment Engine
-//           </span>
-//         </div>
-//         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-//           <div style={{ width:8, height:8, borderRadius:'50%',
-//                         background: autoRunning||legacyRunning ? '#34d399' : '#9ca3af',
-//                         boxShadow: autoRunning||legacyRunning ? '0 0 8px #34d399' : 'none' }} />
-//           <span style={{ color:'#d1fae5', fontSize:13, fontWeight:700 }}>
-//             {autoRunning||legacyRunning ? 'Engine Active' : 'Engine Idle'}
-//           </span>
-//         </div>
-//       </header>
-
-//       <div style={{ maxWidth:1200, margin:'0 auto', padding:'28px 32px 48px' }}>
-
-//         {/* ── STATS STRIP ── */}
-//         <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:24 }}>
-//           {stats.map(({ icon, label, value, color, bg }) => (
-//             <div key={label} style={{ background:'#fff', borderRadius:18, padding:'20px 24px',
-//                                       boxShadow:'0 4px 16px rgba(0,0,0,0.06)',
-//                                       border:'1.5px solid #d1fae5', display:'flex',
-//                                       alignItems:'center', gap:14 }}>
-//               <div style={{ width:44, height:44, borderRadius:14, background:bg, flexShrink:0,
-//                             display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>
-//                 {icon}
-//               </div>
-//               <div>
-//                 <div style={{ fontSize:22, fontWeight:900, color }}>{value}</div>
-//                 <div style={{ fontSize:12, color:'#9ca3af', fontWeight:600 }}>{label}</div>
-//               </div>
-//             </div>
-//           ))}
-//         </div>
-
-//         {/* ── MAIN GRID ── */}
-//         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:20, marginBottom:24 }}>
-
-//           {/* Auto Assignment */}
-//           <div style={{ background:'#fff', borderRadius:20, padding:28,
-//                         boxShadow:'0 4px 20px rgba(0,0,0,0.07)', border:'1.5px solid #d1fae5' }}>
-//             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
-//               <div style={{ width:36, height:36, borderRadius:10, background:'#d1fae5',
-//                             display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>🤖</div>
-//               <div>
-//                 <h3 style={{ margin:0, fontSize:15, fontWeight:800, color:'#064e3b' }}>Auto Assignment</h3>
-//                 <p style={{ margin:0, fontSize:12, color:'#6b7280' }}>Assign drivers automatically</p>
-//               </div>
-//             </div>
-
-//             <div style={{ margin:'20px 0 16px' }}>
-//               <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#374151',
-//                               marginBottom:6, textTransform:'uppercase', letterSpacing:0.5 }}>
-//                 Interval (ms)
-//               </label>
-//               <input type="number" value={intervalMs} min={5000} step={5000}
-//                 onChange={e => setIntervalMs(Number(e.target.value))}
-//                 style={{ width:'100%', padding:'10px 14px', borderRadius:10, fontSize:14,
-//                          border:'1.5px solid #d1fae5', outline:'none', background:'#f9fafb',
-//                          boxSizing:'border-box', fontFamily:"'Nunito',sans-serif" }} />
-//             </div>
-
-//             <div style={{ display:'flex', gap:10, marginBottom:10 }}>
-//               <ActionBtn label="▶ Start" color="green" disabled={autoRunning}
-//                 onClick={async () => {
-//                   await callApi(() => autoAssignmentApi.start(), 'Start auto assignment');
-//                   setAutoRunning(true);
-//                 }} />
-//               <ActionBtn label="■ Stop" color="red" disabled={!autoRunning}
-//                 onClick={async () => {
-//                   await callApi(() => autoAssignmentApi.stop(), 'Stop auto assignment');
-//                   setAutoRunning(false);
-//                 }} />
-//             </div>
-//             <ActionBtn label="⚡ Trigger Once" color="blue" fullWidth
-//               onClick={() => callApi(() => autoAssignmentApi.trigger(), 'Manual trigger')} />
-
-//             <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:16,
-//                           padding:'10px 14px', borderRadius:12,
-//                           background: autoRunning ? '#f0fdf4' : '#f9fafb',
-//                           border: `1px solid ${autoRunning ? '#d1fae5' : '#e5e7eb'}` }}>
-//               <div style={{ position:'relative', width:10, height:10, flexShrink:0 }}>
-//                 {autoRunning && <div style={{ position:'absolute', inset:0, borderRadius:'50%',
-//                                                background:'#34d399', animation:'ping 1.5s ease-out infinite' }} />}
-//                 <div style={{ position:'relative', width:10, height:10, borderRadius:'50%',
-//                               background: autoRunning ? '#10b981' : '#9ca3af' }} />
-//               </div>
-//               <span style={{ fontSize:12, color: autoRunning ? '#065f46' : '#6b7280', fontWeight:700 }}>
-//                 {autoRunning ? 'Auto-assignment is running' : 'Auto-assignment is stopped'}
-//               </span>
-//             </div>
-//           </div>
-
-//           {/* Legacy Assignment Service */}
-//           <div style={{ background:'#fff', borderRadius:20, padding:28,
-//                         boxShadow:'0 4px 20px rgba(0,0,0,0.07)', border:'1.5px solid #d1fae5' }}>
-//             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
-//               <div style={{ width:36, height:36, borderRadius:10, background:'#ede9fe',
-//                             display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>⏱</div>
-//               <div>
-//                 <h3 style={{ margin:0, fontSize:15, fontWeight:800, color:'#064e3b' }}>Assignment Service</h3>
-//                 <p style={{ margin:0, fontSize:12, color:'#6b7280' }}>Interval-based process</p>
-//               </div>
-//             </div>
-
-//             <div style={{ margin:'20px 0 16px', padding:'14px 16px', background:'#fef3c7',
-//                           borderRadius:12, border:'1px solid #fcd34d' }}>
-//               <p style={{ margin:0, fontSize:12, color:'#b45309', fontWeight:600 }}>
-//                 ⚠️ Uses the same interval value set above
-//               </p>
-//             </div>
-
-//             <div style={{ display:'flex', gap:10, marginBottom:10 }}>
-//               <ActionBtn label="▶ Start" color="green" disabled={legacyRunning}
-//                 onClick={async () => {
-//                   await callApi(() => assignmentApi.start(intervalMs), 'Start assignment service');
-//                   setLegacyRunning(true);
-//                 }} />
-//               <ActionBtn label="■ Stop" color="red" disabled={!legacyRunning}
-//                 onClick={async () => {
-//                   await callApi(() => assignmentApi.stop(), 'Stop assignment service');
-//                   setLegacyRunning(false);
-//                 }} />
-//             </div>
-//             <ActionBtn label="⚡ Run Manual" color="blue" fullWidth
-//               onClick={() => callApi(() => assignmentApi.manual(), 'Manual assignment')} />
-
-//             <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:16,
-//                           padding:'10px 14px', borderRadius:12,
-//                           background: legacyRunning ? '#f0fdf4' : '#f9fafb',
-//                           border: `1px solid ${legacyRunning ? '#d1fae5' : '#e5e7eb'}` }}>
-//               <div style={{ position:'relative', width:10, height:10, flexShrink:0 }}>
-//                 {legacyRunning && <div style={{ position:'absolute', inset:0, borderRadius:'50%',
-//                                                 background:'#34d399', animation:'ping 1.5s ease-out infinite' }} />}
-//                 <div style={{ position:'relative', width:10, height:10, borderRadius:'50%',
-//                               background: legacyRunning ? '#10b981' : '#9ca3af' }} />
-//               </div>
-//               <span style={{ fontSize:12, color: legacyRunning ? '#065f46' : '#6b7280', fontWeight:700 }}>
-//                 {legacyRunning ? 'Service is running' : 'Service is stopped'}
-//               </span>
-//             </div>
-//           </div>
-
-//           {/* Quick Actions */}
-//           <div style={{ background:'#fff', borderRadius:20, padding:28,
-//                         boxShadow:'0 4px 20px rgba(0,0,0,0.07)', border:'1.5px solid #d1fae5' }}>
-//             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20 }}>
-//               <div style={{ width:36, height:36, borderRadius:10, background:'#dbeafe',
-//                             display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>⚡</div>
-//               <div>
-//                 <h3 style={{ margin:0, fontSize:15, fontWeight:800, color:'#064e3b' }}>Quick Actions</h3>
-//                 <p style={{ margin:0, fontSize:12, color:'#6b7280' }}>One-click operations</p>
-//               </div>
-//             </div>
-
-//             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-//               {[
-//                 { label:'🔄 Trigger Auto Assignment', color:'blue',
-//                   fn: () => callApi(() => autoAssignmentApi.trigger(), 'Trigger auto') },
-//                 { label:'📋 Run Manual Assignment', color:'green',
-//                   fn: () => callApi(() => assignmentApi.manual(), 'Manual assignment') },
-//                 { label:'⏹ Stop All Services', color:'red',
-//                   fn: async () => {
-//                     await callApi(() => autoAssignmentApi.stop(), 'Stop auto');
-//                     await callApi(() => assignmentApi.stop(), 'Stop legacy');
-//                     setAutoRunning(false); setLegacyRunning(false);
-//                   }},
-//               ].map(({ label, color, fn }) => (
-//                 <ActionBtn key={label} label={label} color={color} fullWidth onClick={fn} />
-//               ))}
-//             </div>
-
-//             <div style={{ marginTop:20, padding:'14px 16px', background:'#f0fdf4',
-//                           borderRadius:12, border:'1px solid #d1fae5' }}>
-//               <p style={{ margin:'0 0 4px', fontSize:12, fontWeight:800, color:'#065f46' }}>
-//                 💡 How it works
-//               </p>
-//               <p style={{ margin:0, fontSize:11, color:'#6b7280', lineHeight:1.5 }}>
-//                 Auto-assignment fetches ready orders and assigns the nearest available driver automatically on a timer.
-//               </p>
-//             </div>
-//           </div>
-//         </div>
-
-//         {/* ── ACTIVITY LOG ── */}
-//         <div style={{ background:'#fff', borderRadius:20, overflow:'hidden',
-//                       boxShadow:'0 4px 20px rgba(0,0,0,0.07)', border:'1.5px solid #d1fae5' }}>
-//           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
-//                         padding:'18px 28px', borderBottom:'1.5px solid #f0fdf4',
-//                         background:'linear-gradient(90deg,#f0fdf4,#fff)' }}>
-//             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-//               <span style={{ fontSize:18 }}>📋</span>
-//               <h3 style={{ margin:0, fontSize:16, fontWeight:800, color:'#064e3b' }}>Activity Log</h3>
-//               {logs.length > 0 && (
-//                 <span style={{ background:'#d1fae5', color:'#065f46', fontSize:11, fontWeight:700,
-//                                padding:'2px 10px', borderRadius:20 }}>{logs.length} entries</span>
-//               )}
-//             </div>
-//             <button onClick={() => setLogs([])}
-//               style={{ background:'none', border:'1.5px solid #d1fae5', borderRadius:10,
-//                        padding:'6px 16px', fontSize:13, cursor:'pointer', color:'#6b7280',
-//                        fontFamily:"'Nunito',sans-serif", fontWeight:600 }}>
-//               Clear Log
-//             </button>
-//           </div>
-
-//           <div style={{ padding:'8px 0', maxHeight:380, overflowY:'auto' }}>
-//             {logs.length === 0 ? (
-//               <div style={{ textAlign:'center', padding:'48px 0' }}>
-//                 <p style={{ fontSize:36, margin:'0 0 10px' }}>📭</p>
-//                 <p style={{ color:'#9ca3af', fontSize:14, fontWeight:600 }}>
-//                   No activity yet — use the controls above
-//                 </p>
-//               </div>
-//             ) : (
-//               logs.map((l, i) => (
-//                 <div key={i} style={{ display:'flex', gap:14, padding:'10px 28px',
-//                                       alignItems:'center', fontSize:13,
-//                                       borderBottom:'1px solid #f9fafb',
-//                                       borderLeft:`4px solid ${
-//                                         l.type==='success' ? '#34d399' :
-//                                         l.type==='error'   ? '#f87171' : '#93c5fd'}`,
-//                                       background: i===0 ? '#fafffe' : 'transparent',
-//                                       animation: i===0 ? 'fadeUp 0.2s ease' : 'none' }}>
-//                   <span style={{ color:'#9ca3af', flexShrink:0, fontSize:11,
-//                                  fontWeight:700, minWidth:70 }}>{l.time}</span>
-//                   <span style={{ width:8, height:8, borderRadius:'50%', flexShrink:0,
-//                                  background: l.type==='success' ? '#34d399' :
-//                                              l.type==='error'   ? '#f87171' : '#93c5fd' }} />
-//                   <span style={{ color: l.type==='error'   ? '#b91c1c' :
-//                                         l.type==='success' ? '#065f46' : '#374151',
-//                                  fontWeight: l.type==='error' ? 700 : 500 }}>
-//                     {l.msg}
-//                   </span>
-//                 </div>
-//               ))
-//             )}
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-// function ActionBtn({ label, color, onClick, disabled, fullWidth }) {
-//   const bg = {
-//     green: 'linear-gradient(90deg,#065f46,#047857)',
-//     red:   'linear-gradient(90deg,#b91c1c,#dc2626)',
-//     blue:  'linear-gradient(90deg,#1d4ed8,#2563eb)',
-//   };
-//   return (
-//     <button className="adm-btn" onClick={onClick} disabled={disabled}
-//       style={{ flex: fullWidth ? undefined : 1, width: fullWidth ? '100%' : undefined,
-//                padding:'12px 0', borderRadius:12, border:'none',
-//                background: disabled ? '#e5e7eb' : bg[color],
-//                color: disabled ? '#9ca3af' : '#fff', fontWeight:800, fontSize:14,
-//                cursor: disabled ? 'not-allowed' : 'pointer',
-//                transition:'all 0.2s', marginTop: fullWidth ? 0 : 0,
-//                fontFamily:"'Nunito',sans-serif",
-//                boxShadow: disabled ? 'none' : '0 2px 8px rgba(0,0,0,0.15)' }}>
-//       {label}
-//     </button>
-//   );
-// }
-
-// src/pages/AdminAssignmentPage.jsx
-import React, { useState, useEffect, useCallback } from 'react'; // CHANGE 1: added useEffect, useCallback
-import { autoAssignmentApi, assignmentApi } from '../api/deliveryApi';
-
-// ── CHANGE 2: Import the token helper so we can hit the order service ─────────
-// Replace '/api' with whatever your order-service base URL env var is.
-const ORDER_API = import.meta.env.VITE_ORDER_API_URL || 'http://localhost:5004/api';
-const DELIVERY_API = import.meta.env.VITE_DELIVERY_API_URL || 'http://localhost:5005/api';
-
-const authHeaders = () => ({
-  'Content-Type': 'application/json',
-  Authorization: `Bearer ${localStorage.getItem('token')}`,
-});
-
-// Fetch orders that are status='ready' (ready for driver pickup)
-const fetchReadyOrders = () =>
-  fetch(`${ORDER_API}/orders/ready`, { headers: authHeaders() })
-    .then(r => r.json()).then(d => d.data || []);
-
-// Fetch drivers that are currently available/online
-const fetchAvailableDrivers = () =>
-  fetch(`${DELIVERY_API}/drivers/available`, { headers: authHeaders() })
-    .then(r => r.json())
-    .then(d => d.data || []);
-
-    
-
-// Assign a driver to an order (updates status to out_for_delivery)
-const assignDriverToOrder = (orderId, driverId) =>
-  fetch(`${DELIVERY_API}/drivers/assign-order`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify({ orderId, driverId }),
-  }).then(r => r.json());
-// ─────────────────────────────────────────────────────────────────────────────
+// Auto-centering component
+function ChangeView({ center, zoom }) {
+  const map = useMap()
+  map.setView(center, zoom)
+  return null
+}
 
 export default function AdminAssignmentPage() {
-  const [autoRunning, setAutoRunning] = useState(false);
-  const [legacyRunning, setLegacyRunning] = useState(false);
-  const [logs, setLogs]               = useState([]);
-  const [intervalMs, setIntervalMs]   = useState(60000);
+  const [orders, setOrders] = useState([])
+  const [drivers, setDrivers] = useState([])
+  const [selectedOrder, setSelectedOrder] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [assigning, setAssigning] = useState(false)
+  const [mapConfig, setMapConfig] = useState({ center: [STORE_LOCATION.lat, STORE_LOCATION.lng], zoom: 13 })
 
-  // ── CHANGE 3: New state for the delivery assignment section ───────────────
-  const [readyOrders,  setReadyOrders]  = useState([]);
-  const [drivers,      setDrivers]      = useState([]);
-  const [loadingOrders, setLoadingOrders] = useState(false);
-  const [selected,     setSelected]     = useState({}); // { [orderId]: driverId }
-  const [assigning,    setAssigning]    = useState({}); // { [orderId]: true/false }
-  const [assignTab,    setAssignTab]    = useState(true); // show/hide the panel
-  // ─────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    fetchData()
+    const timer = setInterval(fetchData, 15000) 
+    return () => clearInterval(timer)
+  }, [])
 
-  const log = (msg, type = 'info') => {
-    setLogs(l => [{ msg, type, time: new Date().toLocaleTimeString() }, ...l.slice(0, 99)]);
-  };
-
-  const callApi = async (fn, label) => {
+  const fetchData = async () => {
     try {
-      log(`→ ${label}…`, 'info');
-      await fn();
-      log(`✓ ${label} succeeded`, 'success');
+      const oRes = await orderApi.getAllOrders({ status: 'ready', sort: 'createdAt:1' })
+      setOrders(oRes.data.data.filter(o => o.status === 'ready'))
+      const dRes = await driverApi.getAvailableDrivers()
+      setDrivers(dRes.data || [])
     } catch (err) {
-      log(`✕ ${label} failed: ${err.message}`, 'error');
-    }
-  };
-
-  // ── CHANGE 4: Load ready orders + available drivers on mount ──────────────
-  const loadAssignmentData = useCallback(async () => {
-    setLoadingOrders(true);
-    try {
-      const [orders, driverList] = await Promise.all([
-        fetchReadyOrders(),
-        fetchAvailableDrivers(),
-      ]);
-      setReadyOrders(orders);
-      setDrivers(driverList);
-    } catch (err) {
-      log(`✕ Failed to load assignment data: ${err.message}`, 'error');
+      console.error('Fetch error:', err)
     } finally {
-      setLoadingOrders(false);
+      setLoading(false)
     }
-  }, []);
+  }
 
-  useEffect(() => { loadAssignmentData(); }, [loadAssignmentData]);
-  // ─────────────────────────────────────────────────────────────────────────
+  const handleSelectOrder = (order) => {
+    setSelectedOrder(order)
+    if (order.shippingAddress?.latitude && order.shippingAddress?.longitude) {
+      setMapConfig({
+        center: [order.shippingAddress.latitude, order.shippingAddress.longitude],
+        zoom: 14
+      })
+    }
+  }
 
-  // ── CHANGE 5: Handle manual driver assignment ─────────────────────────────
-  const handleAssign = async (orderId) => {
-    const driverId = selected[orderId];
-    if (!driverId) { log('✕ Please select a driver first', 'error'); return; }
-    setAssigning(a => ({ ...a, [orderId]: true }));
+  const handleAssign = async (driverId) => {
+    if (!selectedOrder) return
+    setAssigning(true)
     try {
-      log(`→ Assigning driver to order ${orderId.slice(-6).toUpperCase()}…`, 'info');
-      await assignDriverToOrder(orderId, driverId);
-      log(`✓ Driver assigned successfully`, 'success');
-      // Remove order from list; remove driver from dropdown (they're now busy)
-      setReadyOrders(prev => prev.filter(o => (o._id || o.id) !== orderId));
-      setDrivers(prev => prev.filter(d => (d._id || d.id) !== driverId));
-      setSelected(s => { const n = { ...s }; delete n[orderId]; return n; });
+      await assignmentApi.assignOrder(selectedOrder.orderId, driverId)
+      toast.success('Assignment request sent to driver!')
+      setSelectedOrder(null)
+      fetchData()
     } catch (err) {
-      log(`✕ Assignment failed: ${err.message}`, 'error');
+      toast.error(err.message || 'Assignment failed')
     } finally {
-      setAssigning(a => ({ ...a, [orderId]: false }));
+      setAssigning(false)
     }
-  };
-  // ─────────────────────────────────────────────────────────────────────────
+  }
 
-  const stats = [
-    { icon:'🤖', label:'Auto Engine',    value: autoRunning   ? 'Running' : 'Stopped', color: autoRunning   ? '#065f46' : '#6b7280', bg: autoRunning   ? '#d1fae5' : '#f3f4f6' },
-    { icon:'⏱',  label:'Legacy Service', value: legacyRunning ? 'Running' : 'Stopped', color: legacyRunning ? '#065f46' : '#6b7280', bg: legacyRunning ? '#d1fae5' : '#f3f4f6' },
-    { icon:'📋',  label:'Log Entries',   value: logs.length,   color: '#1d4ed8', bg: '#dbeafe' },
-    { icon:'⚡',  label:'Interval',      value: `${intervalMs/1000}s`,  color: '#7c3aed', bg: '#ede9fe' },
-    // ── CHANGE 6: Added a 5th stat card showing how many orders need a driver
-    { icon:'🚚',  label:'Awaiting Driver', value: readyOrders.length, color: readyOrders.length > 0 ? '#b45309' : '#6b7280', bg: readyOrders.length > 0 ? '#fef3c7' : '#f3f4f6' },
-    // ─────────────────────────────────────────────────────────────────────
-  ];
+  const getDistanceNum = (lat1, lon1, lat2, lon2) => {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return 0
+    const R = 6371 
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLon = (lon2 - lon1) * Math.PI / 180
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+              Math.sin(dLon/2) * Math.sin(dLon/2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+    return R * c
+  }
+
+  const formatDist = (d) => d === 0 ? 'N/A' : d.toFixed(2) + ' km'
+
+  if (loading) return <Layout title="Delivery Dashboard"><Spinner /></Layout>
 
   return (
-    <div style={{ minHeight:'100vh', background:'#f0fdf4', fontFamily:"'Nunito',sans-serif" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-        @keyframes ping  { 0%{transform:scale(1);opacity:0.8} 100%{transform:scale(2.2);opacity:0} }
-        @keyframes fadeUp{ from{transform:translateY(8px);opacity:0} to{transform:translateY(0);opacity:1} }
-        .adm-btn:hover:not(:disabled) { opacity:0.88; transform:translateY(-1px); }
-        .adm-btn:active:not(:disabled) { transform:translateY(0); }
-        .order-row:hover { background:#f0fdf4 !important; }
-      `}</style>
-
-      {/* ── HEADER (unchanged) ── */}
-      <header style={{ background:'linear-gradient(90deg,#052e16,#064e3b)', padding:'14px 32px',
-                       display:'flex', alignItems:'center', justifyContent:'space-between',
-                       boxShadow:'0 4px 24px rgba(0,0,0,0.25)', position:'sticky', top:0, zIndex:100 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <div style={{ width:34, height:34, borderRadius:9, background:'rgba(255,255,255,0.12)',
-                        display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>🌿</div>
-          <div>
-            <div style={{ color:'#fff', fontWeight:900, fontSize:16, letterSpacing:-0.5 }}>FreshCart</div>
-            <div style={{ color:'#6ee7b7', fontSize:9, fontWeight:700, letterSpacing:2 }}>ADMIN PANEL</div>
-          </div>
-          <span style={{ background:'rgba(110,231,183,0.15)', color:'#6ee7b7', fontSize:11,
-                         fontWeight:700, padding:'4px 12px', borderRadius:20, marginLeft:4,
-                         border:'1px solid rgba(110,231,183,0.3)' }}>
-            Assignment Engine
-          </span>
-        </div>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <div style={{ width:8, height:8, borderRadius:'50%',
-                        background: autoRunning||legacyRunning ? '#34d399' : '#9ca3af',
-                        boxShadow: autoRunning||legacyRunning ? '0 0 8px #34d399' : 'none' }} />
-          <span style={{ color:'#d1fae5', fontSize:13, fontWeight:700 }}>
-            {autoRunning||legacyRunning ? 'Engine Active' : 'Engine Idle'}
-          </span>
-        </div>
-      </header>
-
-      <div style={{ maxWidth:1200, margin:'0 auto', padding:'28px 32px 48px' }}>
-
-        {/* ── STATS STRIP — now 5 cards ── */}
-        {/* CHANGE 7: grid changed from repeat(4,1fr) → repeat(5,1fr) for the new card */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:16, marginBottom:24 }}>
-          {stats.map(({ icon, label, value, color, bg }) => (
-            <div key={label} style={{ background:'#fff', borderRadius:18, padding:'20px 24px',
-                                      boxShadow:'0 4px 16px rgba(0,0,0,0.06)',
-                                      border:'1.5px solid #d1fae5', display:'flex',
-                                      alignItems:'center', gap:14 }}>
-              <div style={{ width:44, height:44, borderRadius:14, background:bg, flexShrink:0,
-                            display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>
-                {icon}
-              </div>
-              <div>
-                <div style={{ fontSize:22, fontWeight:900, color }}>{value}</div>
-                <div style={{ fontSize:12, color:'#9ca3af', fontWeight:600 }}>{label}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* ── MAIN GRID (unchanged auto-assignment + legacy panels) ── */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:20, marginBottom:24 }}>
-
-          {/* Auto Assignment (unchanged) */}
-          <div style={{ background:'#fff', borderRadius:20, padding:28,
-                        boxShadow:'0 4px 20px rgba(0,0,0,0.07)', border:'1.5px solid #d1fae5' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
-              <div style={{ width:36, height:36, borderRadius:10, background:'#d1fae5',
-                            display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>🤖</div>
-              <div>
-                <h3 style={{ margin:0, fontSize:15, fontWeight:800, color:'#064e3b' }}>Auto Assignment</h3>
-                <p style={{ margin:0, fontSize:12, color:'#6b7280' }}>Assign drivers automatically</p>
-              </div>
-            </div>
-
-            <div style={{ margin:'20px 0 16px' }}>
-              <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#374151',
-                              marginBottom:6, textTransform:'uppercase', letterSpacing:0.5 }}>
-                Interval (ms)
-              </label>
-              <input type="number" value={intervalMs} min={5000} step={5000}
-                onChange={e => setIntervalMs(Number(e.target.value))}
-                style={{ width:'100%', padding:'10px 14px', borderRadius:10, fontSize:14,
-                         border:'1.5px solid #d1fae5', outline:'none', background:'#f9fafb',
-                         boxSizing:'border-box', fontFamily:"'Nunito',sans-serif" }} />
-            </div>
-
-            <div style={{ display:'flex', gap:10, marginBottom:10 }}>
-              <ActionBtn label="▶ Start" color="green" disabled={autoRunning}
-                onClick={async () => {
-                  await callApi(() => autoAssignmentApi.start(), 'Start auto assignment');
-                  setAutoRunning(true);
-                }} />
-              <ActionBtn label="■ Stop" color="red" disabled={!autoRunning}
-                onClick={async () => {
-                  await callApi(() => autoAssignmentApi.stop(), 'Stop auto assignment');
-                  setAutoRunning(false);
-                }} />
-            </div>
-            <ActionBtn label="⚡ Trigger Once" color="blue" fullWidth
-              onClick={() => callApi(() => autoAssignmentApi.trigger(), 'Manual trigger')} />
-
-            <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:16,
-                          padding:'10px 14px', borderRadius:12,
-                          background: autoRunning ? '#f0fdf4' : '#f9fafb',
-                          border: `1px solid ${autoRunning ? '#d1fae5' : '#e5e7eb'}` }}>
-              <div style={{ position:'relative', width:10, height:10, flexShrink:0 }}>
-                {autoRunning && <div style={{ position:'absolute', inset:0, borderRadius:'50%',
-                                               background:'#34d399', animation:'ping 1.5s ease-out infinite' }} />}
-                <div style={{ position:'relative', width:10, height:10, borderRadius:'50%',
-                              background: autoRunning ? '#10b981' : '#9ca3af' }} />
-              </div>
-              <span style={{ fontSize:12, color: autoRunning ? '#065f46' : '#6b7280', fontWeight:700 }}>
-                {autoRunning ? 'Auto-assignment is running' : 'Auto-assignment is stopped'}
-              </span>
-            </div>
-          </div>
-
-          {/* Legacy Assignment Service (unchanged) */}
-          <div style={{ background:'#fff', borderRadius:20, padding:28,
-                        boxShadow:'0 4px 20px rgba(0,0,0,0.07)', border:'1.5px solid #d1fae5' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
-              <div style={{ width:36, height:36, borderRadius:10, background:'#ede9fe',
-                            display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>⏱</div>
-              <div>
-                <h3 style={{ margin:0, fontSize:15, fontWeight:800, color:'#064e3b' }}>Assignment Service</h3>
-                <p style={{ margin:0, fontSize:12, color:'#6b7280' }}>Interval-based process</p>
-              </div>
-            </div>
-
-            <div style={{ margin:'20px 0 16px', padding:'14px 16px', background:'#fef3c7',
-                          borderRadius:12, border:'1px solid #fcd34d' }}>
-              <p style={{ margin:0, fontSize:12, color:'#b45309', fontWeight:600 }}>
-                ⚠️ Uses the same interval value set above
-              </p>
-            </div>
-
-            <div style={{ display:'flex', gap:10, marginBottom:10 }}>
-              <ActionBtn label="▶ Start" color="green" disabled={legacyRunning}
-                onClick={async () => {
-                  await callApi(() => assignmentApi.start(intervalMs), 'Start assignment service');
-                  setLegacyRunning(true);
-                }} />
-              <ActionBtn label="■ Stop" color="red" disabled={!legacyRunning}
-                onClick={async () => {
-                  await callApi(() => assignmentApi.stop(), 'Stop assignment service');
-                  setLegacyRunning(false);
-                }} />
-            </div>
-            <ActionBtn label="⚡ Run Manual" color="blue" fullWidth
-              onClick={() => callApi(() => assignmentApi.manual(), 'Manual assignment')} />
-
-            <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:16,
-                          padding:'10px 14px', borderRadius:12,
-                          background: legacyRunning ? '#f0fdf4' : '#f9fafb',
-                          border: `1px solid ${legacyRunning ? '#d1fae5' : '#e5e7eb'}` }}>
-              <div style={{ position:'relative', width:10, height:10, flexShrink:0 }}>
-                {legacyRunning && <div style={{ position:'absolute', inset:0, borderRadius:'50%',
-                                                background:'#34d399', animation:'ping 1.5s ease-out infinite' }} />}
-                <div style={{ position:'relative', width:10, height:10, borderRadius:'50%',
-                              background: legacyRunning ? '#10b981' : '#9ca3af' }} />
-              </div>
-              <span style={{ fontSize:12, color: legacyRunning ? '#065f46' : '#6b7280', fontWeight:700 }}>
-                {legacyRunning ? 'Service is running' : 'Service is stopped'}
-              </span>
-            </div>
-          </div>
-
-          {/* Quick Actions (unchanged) */}
-          <div style={{ background:'#fff', borderRadius:20, padding:28,
-                        boxShadow:'0 4px 20px rgba(0,0,0,0.07)', border:'1.5px solid #d1fae5' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20 }}>
-              <div style={{ width:36, height:36, borderRadius:10, background:'#dbeafe',
-                            display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>⚡</div>
-              <div>
-                <h3 style={{ margin:0, fontSize:15, fontWeight:800, color:'#064e3b' }}>Quick Actions</h3>
-                <p style={{ margin:0, fontSize:12, color:'#6b7280' }}>One-click operations</p>
-              </div>
-            </div>
-
-            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-              {[
-                { label:'🔄 Trigger Auto Assignment', color:'blue',
-                  fn: () => callApi(() => autoAssignmentApi.trigger(), 'Trigger auto') },
-                { label:'📋 Run Manual Assignment', color:'green',
-                  fn: () => callApi(() => assignmentApi.manual(), 'Manual assignment') },
-                { label:'⏹ Stop All Services', color:'red',
-                  fn: async () => {
-                    await callApi(() => autoAssignmentApi.stop(), 'Stop auto');
-                    await callApi(() => assignmentApi.stop(), 'Stop legacy');
-                    setAutoRunning(false); setLegacyRunning(false);
-                  }},
-                // ── CHANGE 8: Refresh button reloads the ready-orders panel ──
-                { label:'🔃 Refresh Ready Orders', color:'blue',
-                  fn: () => loadAssignmentData() },
-                // ──────────────────────────────────────────────────────────────
-              ].map(({ label, color, fn }) => (
-                <ActionBtn key={label} label={label} color={color} fullWidth onClick={fn} />
-              ))}
-            </div>
-
-            <div style={{ marginTop:20, padding:'14px 16px', background:'#f0fdf4',
-                          borderRadius:12, border:'1px solid #d1fae5' }}>
-              <p style={{ margin:'0 0 4px', fontSize:12, fontWeight:800, color:'#065f46' }}>
-                💡 How it works
-              </p>
-              <p style={{ margin:0, fontSize:11, color:'#6b7280', lineHeight:1.5 }}>
-                Auto-assignment fetches ready orders and assigns the nearest available driver automatically on a timer.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* ════════════════════════════════════════════════════════════════════
-            CHANGE 9 — ENTIRE NEW SECTION: Manual Driver Assignment Panel
-            This whole block is new. Nothing above this line was removed.
-            ════════════════════════════════════════════════════════════════════ */}
-        <div style={{ background:'#fff', borderRadius:20, overflow:'hidden',
-                      boxShadow:'0 4px 20px rgba(0,0,0,0.07)', border:'1.5px solid #d1fae5', marginBottom:24 }}>
-
-          {/* Panel header with collapse toggle */}
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
-                        padding:'18px 28px', borderBottom:'1.5px solid #f0fdf4',
-                        background:'linear-gradient(90deg,#f0fdf4,#fff)' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <span style={{ fontSize:18 }}>🚚</span>
-              <h3 style={{ margin:0, fontSize:16, fontWeight:800, color:'#064e3b' }}>
-                Manual Driver Assignment
-              </h3>
-              {readyOrders.length > 0 && (
-                <span style={{ background:'#fef3c7', color:'#b45309', fontSize:11, fontWeight:700,
-                               padding:'2px 10px', borderRadius:20, border:'1px solid #fcd34d' }}>
-                  {readyOrders.length} order{readyOrders.length !== 1 ? 's' : ''} waiting
-                </span>
-              )}
-            </div>
-            <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-              <button onClick={loadAssignmentData} disabled={loadingOrders}
-                style={{ background:'none', border:'1.5px solid #d1fae5', borderRadius:10,
-                         padding:'6px 16px', fontSize:13, cursor:'pointer', color:'#065f46',
-                         fontFamily:"'Nunito',sans-serif", fontWeight:700,
-                         opacity: loadingOrders ? 0.6 : 1 }}>
-                {loadingOrders ? '…' : '🔃 Refresh'}
-              </button>
-              <button onClick={() => setAssignTab(t => !t)}
-                style={{ background:'none', border:'1.5px solid #d1fae5', borderRadius:10,
-                         padding:'6px 16px', fontSize:13, cursor:'pointer', color:'#6b7280',
-                         fontFamily:"'Nunito',sans-serif", fontWeight:600 }}>
-                {assignTab ? 'Collapse ▲' : 'Expand ▼'}
-              </button>
-            </div>
-          </div>
-
-          {assignTab && (
-            <div style={{ padding:'8px 0' }}>
-              {loadingOrders ? (
-                <div style={{ textAlign:'center', padding:'48px 0' }}>
-                  <p style={{ fontSize:14, color:'#9ca3af', fontWeight:600 }}>Loading orders…</p>
+    <Layout title="Logistics Control" subtitle="Dispatch Hub • Borella Main Branch">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 h-[calc(100vh-180px)]">
+        
+        {/* Left Col: Order Queue */}
+        <div className="xl:col-span-1 flex flex-col gap-4 overflow-hidden">
+          <div className="card h-full flex flex-col border-none shadow-xl shadow-slate-200/50">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-white rounded-t-[1.5rem]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+                  <ShoppingBag size={20} />
                 </div>
-              ) : readyOrders.length === 0 ? (
-                <div style={{ textAlign:'center', padding:'48px 0' }}>
-                  <p style={{ fontSize:36, margin:'0 0 10px' }}>✅</p>
-                  <p style={{ color:'#9ca3af', fontSize:14, fontWeight:600 }}>
-                    No orders waiting for a driver right now
-                  </p>
+                <div>
+                  <h3 className="font-black text-slate-800 text-sm uppercase tracking-wider">Order Queue</h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">First In, First Out</p>
+                </div>
+              </div>
+              <Badge type="active" label={`${orders.length} Ready`} />
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+              {orders.length === 0 ? (
+                <div className="p-12 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                  <Clock className="mx-auto text-slate-300 mb-2" size={40} />
+                  <p className="text-sm text-slate-500 font-bold">Queue is empty</p>
                 </div>
               ) : (
-                <>
-                  {/* Driver availability warning */}
-                  {drivers.length === 0 && (
-                    <div style={{ margin:'12px 28px', padding:'12px 16px', background:'#fef2f2',
-                                  border:'1px solid #fca5a5', borderRadius:12,
-                                  fontSize:13, color:'#b91c1c', fontWeight:600 }}>
-                      ⚠️ No drivers are currently available. Ask drivers to go online in their app.
+                orders.map(order => (
+                  <div 
+                    key={order._id}
+                    onClick={() => handleSelectOrder(order)}
+                    className={`p-5 rounded-[1.5rem] border-2 transition-all cursor-pointer group
+                      ${selectedOrder?._id === order._id 
+                        ? 'border-emerald-500 bg-emerald-50/30 ring-4 ring-emerald-500/10 shadow-lg' 
+                        : 'border-slate-50 bg-white hover:border-emerald-200 hover:shadow-md'}`}
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <span className="font-mono text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">ID: {order.orderId.slice(-6)}</span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">{new Date(order.createdAt).toLocaleTimeString()}</span>
                     </div>
-                  )}
-
-                  {/* Column headers */}
-                  <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1.8fr auto',
-                                gap:16, padding:'10px 28px', borderBottom:'1px solid #f0fdf4',
-                                fontSize:11, fontWeight:700, color:'#9ca3af',
-                                textTransform:'uppercase', letterSpacing:0.5 }}>
-                    <span>Order</span>
-                    <span>Items / Total</span>
-                    <span>Placed at</span>
-                    <span>Assign Driver</span>
-                    <span>Action</span>
+                    <div className="font-black text-slate-800 text-lg group-hover:text-emerald-700 transition-colors">{order.customerName}</div>
+                    <div className="text-xs text-slate-500 font-medium flex items-center gap-2 mb-3">
+                      <MapPin size={14} className="text-slate-300" /> {order.shippingAddress?.street || 'Local Delivery'}
+                    </div>
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-50">
+                       <div className="flex flex-col">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase">Amount</span>
+                          <span className="text-sm font-black text-slate-800 italic">LKR {order.totalAmount?.toFixed(2)}</span>
+                       </div>
+                       <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${selectedOrder?._id === order._id ? 'bg-emerald-500 text-white' : 'bg-slate-50 text-slate-300'}`}>
+                          <ChevronRight size={18} />
+                       </div>
+                    </div>
                   </div>
-
-                  {readyOrders.map((order, i) => {
-                    const oid      = order._id || order.id;
-                    const shortId  = (order.orderId || oid).toString().slice(-8).toUpperCase();
-                    const placedAt = new Date(order.createdAt).toLocaleTimeString('en-US', {
-                      hour: '2-digit', minute: '2-digit',
-                    });
-                    const total = order.totalAmount?.toFixed(2) || '—';
-                    const isBusy = !!assigning[oid];
-
-                    return (
-                      <div key={oid} className="order-row"
-                        style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1.8fr auto',
-                                  gap:16, padding:'14px 28px', alignItems:'center',
-                                  borderBottom:'1px solid #f9fafb',
-                                  background: i % 2 === 0 ? 'transparent' : '#fafffe',
-                                  transition:'background 0.15s', fontSize:13 }}>
-
-                        {/* Order ID + customer */}
-                        <div>
-                          <span style={{ fontWeight:900, color:'#064e3b', fontSize:14 }}>
-                            #{shortId}
-                          </span>
-                          <br />
-                          <span style={{ color:'#9ca3af', fontSize:12 }}>
-                            {order.customerName || order.customerId}
-                          </span>
-                        </div>
-
-                        {/* Items + total */}
-                        <div>
-                          <span style={{ fontWeight:700, color:'#374151' }}>
-                            {order.items?.length || 0} items
-                          </span>
-                          <br />
-                          <span style={{ color:'#065f46', fontWeight:800, fontSize:12 }}>
-                            LKR {total}
-                          </span>
-                        </div>
-
-                        {/* Placed at */}
-                        <span style={{ color:'#6b7280' }}>{placedAt}</span>
-
-                        {/* Driver dropdown */}
-                        <select
-                          value={selected[oid] || ''}
-                          onChange={e => setSelected(s => ({ ...s, [oid]: e.target.value }))}
-                          disabled={isBusy || drivers.length === 0}
-                          style={{ width:'100%', padding:'8px 12px', borderRadius:10, fontSize:13,
-                                   border:'1.5px solid #d1fae5', outline:'none', background:'#f9fafb',
-                                   fontFamily:"'Nunito',sans-serif", color:'#374151', cursor:'pointer',
-                                   opacity: drivers.length === 0 ? 0.5 : 1 }}>
-                          <option value="">— Select driver —</option>
-                          {drivers.map(d => (
-                            <option key={d._id || d.id} value={d._id || d.id}>
-                              {d.name} · {d.vehicleType}
-                              {d.rating?.average ? ` · ⭐${d.rating.average.toFixed(1)}` : ''}
-                            </option>
-                          ))}
-                        </select>
-
-                        {/* Assign button */}
-                        <button
-                          className="adm-btn"
-                          onClick={() => handleAssign(oid)}
-                          disabled={!selected[oid] || isBusy}
-                          style={{ padding:'9px 20px', borderRadius:10, border:'none',
-                                   background: selected[oid] && !isBusy
-                                     ? 'linear-gradient(90deg,#065f46,#047857)'
-                                     : '#e5e7eb',
-                                   color: selected[oid] && !isBusy ? '#fff' : '#9ca3af',
-                                   fontWeight:800, fontSize:13, whiteSpace:'nowrap',
-                                   cursor: selected[oid] && !isBusy ? 'pointer' : 'not-allowed',
-                                   fontFamily:"'Nunito',sans-serif",
-                                   boxShadow: selected[oid] ? '0 2px 8px rgba(6,95,70,0.25)' : 'none',
-                                   transition:'all 0.2s' }}>
-                          {isBusy ? '…' : '🚗 Assign'}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </>
+                ))
               )}
             </div>
-          )}
+          </div>
         </div>
-        {/* ════════════════════════════════════════════════════════════════════
-            END CHANGE 9
-            ════════════════════════════════════════════════════════════════════ */}
 
-        {/* ── ACTIVITY LOG (unchanged) ── */}
-        <div style={{ background:'#fff', borderRadius:20, overflow:'hidden',
-                      boxShadow:'0 4px 20px rgba(0,0,0,0.07)', border:'1.5px solid #d1fae5' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
-                        padding:'18px 28px', borderBottom:'1.5px solid #f0fdf4',
-                        background:'linear-gradient(90deg,#f0fdf4,#fff)' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <span style={{ fontSize:18 }}>📋</span>
-              <h3 style={{ margin:0, fontSize:16, fontWeight:800, color:'#064e3b' }}>Activity Log</h3>
-              {logs.length > 0 && (
-                <span style={{ background:'#d1fae5', color:'#065f46', fontSize:11, fontWeight:700,
-                               padding:'2px 10px', borderRadius:20 }}>{logs.length} entries</span>
+        {/* Right Col: Map & Details */}
+        <div className="xl:col-span-2 flex flex-col gap-6">
+          <div className="card flex-1 relative min-h-[450px] overflow-hidden rounded-[2rem] border-none shadow-2xl shadow-slate-200/50">
+            <MapContainer center={mapConfig.center} zoom={mapConfig.zoom} style={{ height: '100%', width: '100%', zIndex: 10 }}>
+              <ChangeView center={mapConfig.center} zoom={mapConfig.zoom} />
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              
+              {/* Main Branch - Borella */}
+              <Marker position={[STORE_LOCATION.lat, STORE_LOCATION.lng]} icon={storeIcon}>
+                <Popup>
+                   <div className="p-2">
+                      <div className="font-black text-emerald-700 text-sm">{STORE_LOCATION.name}</div>
+                      <div className="text-[10px] text-slate-500 font-bold uppercase">Operational Hub</div>
+                   </div>
+                </Popup>
+              </Marker>
+
+              {/* Customer Marker */}
+              {selectedOrder?.shippingAddress?.latitude && (
+                <Marker position={[selectedOrder.shippingAddress.latitude, selectedOrder.shippingAddress.longitude]} icon={customerIcon}>
+                  <Popup>
+                    <div className="p-1">
+                      <div className="font-bold text-emerald-700">Customer: {selectedOrder.customerName}</div>
+                      <div className="text-[10px] font-bold text-slate-500 italic uppercase">Delivery Point</div>
+                    </div>
+                  </Popup>
+                  <Circle 
+                    center={[selectedOrder.shippingAddress.latitude, selectedOrder.shippingAddress.longitude]} 
+                    radius={1500} 
+                    pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 0.1, weight: 1, dashArray: '5, 5' }}
+                  />
+                </Marker>
               )}
+
+              {/* Driver Markers */}
+              {drivers.map(driver => (
+                driver.currentLocation?.latitude && (
+                  <Marker 
+                    key={driver._id} 
+                    position={[driver.currentLocation.latitude, driver.currentLocation.longitude]}
+                    icon={driver.isAvailable ? driverOnlineIcon : driverBusyIcon}
+                  >
+                    <Popup>
+                      <div className="p-1 space-y-2 min-w-[150px]">
+                        <div className="font-black text-slate-800">{driver.name}</div>
+                        <div className="text-[10px] text-slate-400 font-bold uppercase">{driver.vehicleType} • {driver.licensePlate}</div>
+                        
+                        <div className="bg-slate-50 p-2 rounded-lg space-y-1">
+                           <div className="flex justify-between items-center">
+                              <span className="text-[10px] text-slate-400 font-bold">To Store</span>
+                              <span className="text-xs font-black text-emerald-600">
+                                 {formatDist(getDistanceNum(STORE_LOCATION.lat, STORE_LOCATION.lng, driver.currentLocation.latitude, driver.currentLocation.longitude))}
+                              </span>
+                           </div>
+                           {selectedOrder && (
+                             <div className="flex justify-between items-center">
+                                <span className="text-[10px] text-slate-400 font-bold">To Drop</span>
+                                <span className="text-xs font-black text-blue-600">
+                                   {formatDist(getDistanceNum(selectedOrder.shippingAddress.latitude, selectedOrder.shippingAddress.longitude, driver.currentLocation.latitude, driver.currentLocation.longitude))}
+                                </span>
+                             </div>
+                           )}
+                        </div>
+
+                        {driver.isAvailable && selectedOrder && (
+                          <button 
+                            onClick={() => handleAssign(driver._id)}
+                            className="w-full bg-emerald-600 text-white text-[10px] font-black py-2 rounded-xl uppercase tracking-widest hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-200"
+                          >
+                            Assign Pilot
+                          </button>
+                        )}
+                      </div>
+                    </Popup>
+                  </Marker>
+                )
+              ))}
+            </MapContainer>
+            
+            {/* Legend / Overlay */}
+            <div className="absolute bottom-6 right-6 z-[1000] bg-white/90 backdrop-blur-md p-4 rounded-3xl shadow-2xl border border-slate-100 flex flex-col gap-3">
+               <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200" />
+                  <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">RapidCart Store</span>
+               </div>
+               <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-slate-300" />
+                  <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Idle Rider</span>
+               </div>
             </div>
-            <button onClick={() => setLogs([])}
-              style={{ background:'none', border:'1.5px solid #d1fae5', borderRadius:10,
-                       padding:'6px 16px', fontSize:13, cursor:'pointer', color:'#6b7280',
-                       fontFamily:"'Nunito',sans-serif", fontWeight:600 }}>
-              Clear Log
-            </button>
           </div>
 
-          <div style={{ padding:'8px 0', maxHeight:380, overflowY:'auto' }}>
-            {logs.length === 0 ? (
-              <div style={{ textAlign:'center', padding:'48px 0' }}>
-                <p style={{ fontSize:36, margin:'0 0 10px' }}>📭</p>
-                <p style={{ color:'#9ca3af', fontSize:14, fontWeight:600 }}>
-                  No activity yet — use the controls above
-                </p>
-              </div>
-            ) : (
-              logs.map((l, i) => (
-                <div key={i} style={{ display:'flex', gap:14, padding:'10px 28px',
-                                      alignItems:'center', fontSize:13,
-                                      borderBottom:'1px solid #f9fafb',
-                                      borderLeft:`4px solid ${
-                                        l.type==='success' ? '#34d399' :
-                                        l.type==='error'   ? '#f87171' : '#93c5fd'}`,
-                                      background: i===0 ? '#fafffe' : 'transparent',
-                                      animation: i===0 ? 'fadeUp 0.2s ease' : 'none' }}>
-                  <span style={{ color:'#9ca3af', flexShrink:0, fontSize:11,
-                                 fontWeight:700, minWidth:70 }}>{l.time}</span>
-                  <span style={{ width:8, height:8, borderRadius:'50%', flexShrink:0,
-                                 background: l.type==='success' ? '#34d399' :
-                                             l.type==='error'   ? '#f87171' : '#93c5fd' }} />
-                  <span style={{ color: l.type==='error'   ? '#b91c1c' :
-                                        l.type==='success' ? '#065f46' : '#374151',
-                                 fontWeight: l.type==='error' ? 700 : 500 }}>
-                    {l.msg}
-                  </span>
+          {/* Near Driver List Table */}
+          <div className="card h-1/3 flex flex-col border-none shadow-xl shadow-slate-200/50 overflow-hidden rounded-[2rem]">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                  <Truck size={20} />
                 </div>
-              ))
-            )}
+                <div>
+                  <h3 className="font-black text-slate-800 text-sm uppercase tracking-wider">Nearby Riders</h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">Ready for Dispatch</p>
+                </div>
+              </div>
+              <Badge type="info" label={`${drivers.length} Active Pilots`} className="bg-blue-50 text-blue-600 border-none" />
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-0">
+               <Table headers={['Pilot Info', 'Distance to Store', 'Delivery Charge', 'Rider Pay', 'Action']} compact>
+                 {drivers.map(driver => {
+                    const distToStore = getDistanceNum(STORE_LOCATION.lat, STORE_LOCATION.lng, driver.currentLocation?.latitude, driver.currentLocation?.longitude)
+                    const distToCust = selectedOrder ? getDistanceNum(selectedOrder.shippingAddress?.latitude, selectedOrder.shippingAddress?.longitude, STORE_LOCATION.lat, STORE_LOCATION.lng) : 0
+                    
+                    const totalTripDist = distToStore + distToCust
+                    const transportCharge = totalTripDist * TRANSPORT_RATE_PER_KM
+                    const riderPay = transportCharge * 0.8 // 80% to rider
+                    
+                    return (
+                      <tr key={driver._id} className="hover:bg-slate-50/50 group transition-colors">
+                        <td className="table-cell py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-700 text-xs font-black group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                              {driver.name[0]}
+                            </div>
+                            <div>
+                               <div className="text-xs font-black text-slate-800">{driver.name}</div>
+                               <div className="text-[10px] text-slate-400 font-bold uppercase italic">{driver.vehicleType}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="table-cell py-4 text-xs font-black text-slate-600 italic">
+                           {formatDist(distToStore)}
+                        </td>
+                        <td className="table-cell py-4">
+                           <div className="text-xs font-black text-slate-800">LKR {transportCharge.toFixed(2)}</div>
+                           <div className="text-[10px] text-slate-400 font-bold uppercase">Est. Cost</div>
+                        </td>
+                        <td className="table-cell py-4">
+                           <div className="text-xs font-black text-emerald-600 italic">LKR {riderPay.toFixed(2)}</div>
+                           <div className="text-[10px] text-slate-400 font-bold uppercase">Comission</div>
+                        </td>
+                        <td className="table-cell py-4 text-right">
+                          <button 
+                             disabled={!driver.isAvailable || !selectedOrder || assigning}
+                             onClick={() => handleAssign(driver._id)}
+                             className="bg-[#0d1f12] text-white px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 disabled:opacity-20 transition-all active:scale-95 shadow-lg shadow-emerald-950/20"
+                          >
+                            {assigning && selectedOrder?._id === order?._id ? <Spinner size="xs" /> : 'Dispatch'}
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                 })}
+                 {drivers.length === 0 && (
+                   <tr>
+                     <td colSpan="5" className="p-12 text-center bg-slate-50/30 italic text-slate-400 text-xs font-bold uppercase">No Pilots Tracking</td>
+                   </tr>
+                 )}
+               </Table>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function ActionBtn({ label, color, onClick, disabled, fullWidth }) {
-  const bg = {
-    green: 'linear-gradient(90deg,#065f46,#047857)',
-    red:   'linear-gradient(90deg,#b91c1c,#dc2626)',
-    blue:  'linear-gradient(90deg,#1d4ed8,#2563eb)',
-  };
-  return (
-    <button className="adm-btn" onClick={onClick} disabled={disabled}
-      style={{ flex: fullWidth ? undefined : 1, width: fullWidth ? '100%' : undefined,
-               padding:'12px 0', borderRadius:12, border:'none',
-               background: disabled ? '#e5e7eb' : bg[color],
-               color: disabled ? '#9ca3af' : '#fff', fontWeight:800, fontSize:14,
-               cursor: disabled ? 'not-allowed' : 'pointer',
-               transition:'all 0.2s', marginTop: fullWidth ? 0 : 0,
-               fontFamily:"'Nunito',sans-serif",
-               boxShadow: disabled ? 'none' : '0 2px 8px rgba(0,0,0,0.15)' }}>
-      {label}
-    </button>
-  );
+      
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .leaflet-container { border-radius: 2rem; box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.05); border: 4px solid white; }
+      `}</style>
+    </Layout>
+  )
 }

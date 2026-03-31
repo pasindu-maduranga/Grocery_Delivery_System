@@ -13,16 +13,7 @@ const registerUser = async (data) => {
     phoneNo,
     address,
     role,
-    // businessName,
-    // businessAddress,
-    // taxId,
-    // businessPhoneNo,
-    // ItemTypes,
-    // vehicleType,
-    // licensePlate,
-    // currentLocation,
-    // isAvailable,
-    // currentOrders,
+    location,
   } = data;
 
   const existingUser = await User.findOne({ email });
@@ -40,16 +31,7 @@ const registerUser = async (data) => {
     address,
     role: role || "customer",
     isVerified: true,
-    // businessName,
-    // businessAddress,
-    // taxId,
-    // businessPhoneNo,
-    // ItemTypes,
-    // vehicleType,
-    // licensePlate,
-    // currentLocation,
-    // isAvailable,
-    // currentOrders,
+    location: location || {},
   });
 
   await user.save();

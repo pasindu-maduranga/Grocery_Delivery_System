@@ -81,7 +81,7 @@ export default function OrdersPage() {
           <StatCard icon={ShoppingBag}  label="Total Orders"   value={stats.total}     color="bg-primary-600" />
           <StatCard icon={Clock}        label="Pending"         value={stats.pending}   color="bg-yellow-500" />
           <StatCard icon={CheckCircle}  label="Delivered"       value={stats.delivered} color="bg-emerald-600" />
-          <StatCard icon={TrendingUp}   label="Revenue (paid)"  value={`$${(stats.totalRevenue || 0).toFixed(2)}`} color="bg-violet-600" />
+          <StatCard icon={TrendingUp}   label="Revenue (paid)"  value={"LKR " + (stats.totalRevenue || 0).toFixed(2)} color="bg-violet-600" />
         </div>
       )}
 
@@ -144,7 +144,7 @@ export default function OrdersPage() {
                     <div className="text-xs text-slate-400">{order.customerEmail}</div>
                   </td>
                   <td className="px-4 py-3 text-slate-600">{order.items?.length || 0} item(s)</td>
-                  <td className="px-4 py-3 font-semibold text-slate-800">${order.totalAmount?.toFixed(2)}</td>
+                  <td className="px-4 py-3 font-semibold text-slate-800">LKR {(order.totalAmount || 0).toFixed(2)}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${STATUS_COLORS[order.status] || 'bg-gray-100 text-gray-600'}`}>
                       {order.status?.replace(/_/g, ' ')}

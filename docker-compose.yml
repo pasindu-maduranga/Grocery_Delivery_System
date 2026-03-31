@@ -10,6 +10,8 @@ services:
       - "5000:5000"
     env_file:
       - ./Grocery_Store_Management/backend/src/.env
+    environment:
+      - DELIVERY_SERVICE_URL=http://delivery-service:5005/api
     restart: unless-stopped
     networks:
       - grocery-network
@@ -33,7 +35,7 @@ services:
     build: ./Delivery_Management/backend
     container_name: delivery-service
     ports:
-      - "5001:5001"
+      - "5005:5005"
     env_file:
       - ./Delivery_Management/backend/.env
     restart: unless-stopped
@@ -58,6 +60,7 @@ services:
       args:
         - VITE_API_URL=http://localhost:5000/api
         - VITE_API_URL_ORDER=http://localhost:5004/api
+        - VITE_DELIVERY_SERVICE_URL=http://localhost:5005/api
     container_name: admin-dashboard
     ports:
       - "5173:80"
@@ -72,6 +75,7 @@ services:
       args:
         - VITE_API_URL_USER_MANAGEMENT_SERVICE=http://localhost:5003/api
         - VITE_API_URL_GROCERY_MANAGEMENT_SERVICE=http://localhost:5000/api
+        - VITE_DELIVERY_SERVICE_URL=http://localhost:5005/api
         - VITE_STRIPE_PUBLISHABLE_KEY=pk_test_51T8FA0CHMdOpXSyUdEp5T6KaDuOecXRk4IfE8Hqf15trW1kIOaXW0iyMvYOXJ7UhKyLYKXv1kInx2VQxXgiav2aU00tsvkgszS
     container_name: customer-app
     ports:

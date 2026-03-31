@@ -1,7 +1,7 @@
 // src/api/deliveryApi.js
 // Central API layer — matches your backend routes exactly
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api';
+const BASE_URL = import.meta.env.VITE_DELIVERY_SERVICE_URL || 'http://localhost:5005/api';
 
 //  Helpers 
 
@@ -37,11 +37,17 @@ export const driverApi = {
 
   // ── Profile endpoints (driverProfileRoutes.js) ───────────────────────────
   getProfile:            (driverId)              => get(`/drivers/profile/${driverId}`),
-  getProfileByUserId:    (userId)                => get(`/drivers/profile/user/${userId}`),
+  getProfileByUserId:    (userId)                => get(`/drivers/find/${userId}`),
   updateProfile:         (driverId, data)        => put(`/drivers/profile/${driverId}`, data),
   toggleActiveStatus:    (driverId)              => patch(`/drivers/profile/${driverId}/toggle`, {}),
   getStats:              (driverId)              => get(`/drivers/profile/${driverId}/stats`),
   updateProfileLocation: (driverId, lat, lng)    => put(`/drivers/profile/${driverId}/location`, { latitude: lat, longitude: lng }),
+  
+  // Admin Management
+  getAll:                ()                      => get('/drivers'),
+  toggleActive:          (driverId)              => patch(`/drivers/${driverId}/toggle-active`, {}),
+  getByUserId:           (userId)                => get(`/drivers/find/${userId}`),
+  getAvailableDrivers:   ()                      => get('/drivers/available'),
 };
 
 // ─── Delivery APIs  (routes: /api/deliveries) ───────────────────────────────
@@ -70,4 +76,5 @@ export const assignmentApi = {
   start:  (intervalMs) => post('/assignment/start', { intervalMs }),
   stop:   ()           => post('/assignment/stop', {}),
   manual: ()           => post('/assignment/manual', {}),
+  assignOrder: (orderId, driverId) => post('/drivers/assign-order', { orderId, driverId }),
 };

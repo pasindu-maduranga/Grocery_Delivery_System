@@ -5,7 +5,7 @@ import { Plus, Pencil, Lock, Unlock, Power, KeyRound } from 'lucide-react'
 import Layout from '../components/layout/Layout'
 import React from 'react'
 
-const EMPTY_FORM = { firstName: '', lastName: '', username: '', password: '', roleId: '' }
+const EMPTY_FORM = { firstName: '', lastName: '', email: '', username: '', password: '', roleId: '' }
 
 export default function UsersPage() {
   const [users, setUsers] = useState([])
@@ -37,7 +37,7 @@ export default function UsersPage() {
   }
 
   const openEdit = (user) => {
-    setForm({ firstName: user.firstName, lastName: user.lastName, username: user.username, password: '', roleId: user.role?._id || '' })
+    setForm({ firstName: user.firstName, lastName: user.lastName, email: user.email || '', username: user.username, password: '', roleId: user.role?._id || '' })
     setError('')
     setModal({ open: true, mode: 'edit', user })
   }
@@ -184,6 +184,9 @@ export default function UsersPage() {
           </div>
           <FormField label="Username">
             <input className="input" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} required disabled={modal.mode === 'edit'} />
+          </FormField>
+          <FormField label="Email Address">
+            <input type="email" className="input" value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="driver@example.com for notifications" />
           </FormField>
           {modal.mode === 'create' && (
             <FormField label="Password">

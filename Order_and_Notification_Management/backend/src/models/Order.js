@@ -44,7 +44,18 @@ const orderSchema = new mongoose.Schema({
     state: { type: String },
     zip: { type: String },
     country: { type: String },
+    latitude: { type: Number },
+    longitude: { type: Number },
   },
+
+  assignedDriverId: { type: String, default: null },
+  assignmentStatus: {
+    type: String,
+    enum: ['unassigned', 'pending', 'accepted', 'rejected'],
+    default: 'unassigned'
+  },
+  deliveryFee: { type: Number, default: 0 },
+  estimatedDeliveryTime: { type: Date },
 
   notes: { type: String },
   adminNotes: { type: String },
@@ -55,12 +66,7 @@ const orderSchema = new mongoose.Schema({
       changedAt: { type: Date, default: Date.now },
       changedBy: { type: String },
       note: { type: String },
-    },
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Driver',
-      default: null,
-    },
+    }
   ],
 }, { timestamps: true });
 

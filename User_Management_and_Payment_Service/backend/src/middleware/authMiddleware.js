@@ -9,7 +9,7 @@ const auth = async (req, res, next) => {
             return res.status(401).json({ success: false, message: 'Authentication token missing' });
         }
         
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'rapidcart_secret_key_2026');
         const userId = decoded.id || decoded.userId;
 
         // If it's a system_user (from Grocery Store), we trust the token without local DB lookup

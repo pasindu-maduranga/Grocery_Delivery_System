@@ -20,7 +20,7 @@ const ForgotPasswordForm = () => {
     setLoading(true);
     try {
       const res = await axios.post(
-        `${import.meta.env.VITE_API_URL}/auth/forgot-password`,
+        `${import.meta.env.VITE_API_URL_USER_MANAGEMENT_SERVICE}/auth/forgot-password`,
         { email }
       );
       toast.success(res.data.message || "Password reset link sent!");

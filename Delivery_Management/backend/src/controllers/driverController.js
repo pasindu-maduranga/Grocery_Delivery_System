@@ -196,3 +196,37 @@ exports.getAvailableDrivers = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Admin: Get all drivers
+exports.getAllDrivers = async (req, res) => {
+  try {
+    const drivers = await Driver.find().sort({ createdAt: -1 });
+    res.status(200).json({ success: true, data: drivers });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Admin: Toggle active status
+exports.toggleActiveStatus = async (req, res) => {
+  try {
+    const driver = await Driver.findById(req.params.driverId);
+    if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
+    driver.isActive = !driver.isActive;
+    await driver.save();
+    res.status(200).json({ success: true, driver });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Common: Get driver by User ID
+exports.getDriverByUserId = async (req, res) => {
+  try {
+    const driver = await Driver.findOne({ userId: req.params.userId });
+    if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
+    res.status(200).json({ success: true, driver });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

@@ -30,6 +30,9 @@ import AdminAssignmentPage from "./pages/AdminAssignmentPage";
 import DriverProfilePage from "./pages/DriverProfilePage";
 import OrdersPage from "./OrderManagement/OrdersPage";
 import OrderDetailPage from "./OrderManagement/OrderDetailPage";
+import DriversPage from "./pages/DriversPage";
+import DriverOrdersPage from "./pages/DriverOrdersPage";
+import DriverSettingsPage from "./pages/DriverSettingsPage";
 
 export default function App() {
   const driverId = localStorage.getItem("fc_driver_id") || "";
@@ -208,15 +211,36 @@ export default function App() {
             element={<DeliveryTrackingPage />}
           />
           <Route
+            path="/admin/drivers"
+            element={
+              <PrivateRoute>
+                <PermissionRoute screenCode="SCREEN_ALL_DRIVERS">
+                  <DriversPage />
+                </PermissionRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/driver/orders"
+            element={
+              <PrivateRoute>
+                <PermissionRoute screenCode="SCREEN_DRIVER_MY_ORDERS">
+                  <DriverOrdersPage />
+                </PermissionRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/admin/delivery-assignment"
             element={<AdminAssignmentPage />}
           />
           <Route
             path="/driver/profile"
-            element={
-              <DriverProfilePage />
-             
-            }
+            element={<DriverProfilePage />}
+          />
+          <Route
+            path="/driver/settings"
+            element={<DriverSettingsPage />}
           />
 
           {/* Order Management */}

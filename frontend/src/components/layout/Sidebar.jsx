@@ -74,7 +74,7 @@ const SidebarMenu = ({ menu }) => {
 }
 
 export default function Sidebar() {
-  const { user, sidebar, logout } = useAuth()
+  const { user, sidebar, logout, isDriver } = useAuth()
   const navigate = useNavigate()
   const [activeParent, setActiveParent] = useState(null)
 
@@ -112,6 +112,20 @@ export default function Sidebar() {
         >
           <LayoutDashboard size={18} />
         </NavLink>
+
+        {isDriver && (
+          <NavLink
+            to="/driver/settings"
+            title="Presence Settings"
+            className={({ isActive }) =>
+              `w-10 h-10 flex items-center justify-center rounded-xl transition-all ${
+                isActive ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/50' : 'text-slate-400 hover:bg-white/10'
+              }`
+            }
+          >
+            <Settings size={18} />
+          </NavLink>
+        )}
 
         <div className="w-6 h-px bg-white/10 my-1" />
 

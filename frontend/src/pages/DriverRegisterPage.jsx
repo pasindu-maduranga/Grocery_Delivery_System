@@ -1,174 +1,176 @@
-// src/pages/DriverRegisterPage.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { driverApi } from '../api/deliveryApi';
+import { Truck, MapPin, ShieldCheck, Mail, Phone, Car, BadgeCheck, ArrowRight, Loader2 } from 'lucide-react';
+import { Spinner } from '../components/common';
+import { toast } from 'sonner';
 
 const VEHICLE_TYPES = ['Car', 'Motorcycle', 'Van', 'Scooter'];
 
-export default function DriverRegisterPage({ onRegistered }) {
+export default function DriverRegisterPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
     userId: '', name: '', email: '', phone: '',
     vehicleType: 'Car', licensePlate: '', maxCarryWeightKg: 20,
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
-  const [success, setSuccess] = useState(false);
 
   const handle = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 
   const submit = async (e) => {
     e.preventDefault();
-    setLoading(true); setError('');
+    setLoading(true);
     try {
       const res = await driverApi.register(form);
       const driver = res.driver || res;
-
-      // ✅ Save driver ID to localStorage
       localStorage.setItem('fc_driver_id', driver._id);
-
-      setSuccess(true);
-
-      // ✅ Call parent callback if provided
-      onRegistered?.(driver);
-
-      // ✅ Navigate to driver dashboard after 1.5s
-      setTimeout(() => {
-        navigate('/driver/dashboard');
-      }, 1500);
-
+      toast.success('Registration successful! Welcome to the fleet.');
+      setTimeout(() => navigate('/driver/dashboard'), 1500);
     } catch (err) {
-      setError(err.message);
+      toast.error(err.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={styles.page}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      {/* Left panel - branding */}
-      <div style={styles.hero}>
-        <div style={styles.leaf}>🌿</div>
-        <h1 style={styles.brand}>FreshCart</h1>
-        <p style={styles.tagline}>
-          Deliver fresh groceries to<br />thousands of happy homes
-        </p>
-        <div style={styles.stats}>
-          {[['500+', 'Active Drivers'], ['98%', 'On-Time Rate'], ['4.9★', 'Avg Rating']].map(([val, lbl]) => (
-            <div key={lbl} style={styles.stat}>
-              <span style={styles.statVal}>{val}</span>
-              <span style={styles.statLbl}>{lbl}</span>
+    <div className="min-h-screen bg-white flex font-sans">
+      {/* Left side - Visual & Marketing */}
+      <div className="hidden lg:flex lg:w-5/12 bg-[#0d1f12] p-16 flex-col justify-between relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] -mr-48 -mt-48" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-600/5 rounded-full blur-[80px] -ml-32 -mb-32" />
+        
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-12">
+            <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <Truck size={20} className="text-white" />
             </div>
-          ))}
+            <span className="text-white font-black text-xl tracking-tight">FreshCart <span className="text-emerald-400">Logistics</span></span>
+          </div>
+          
+          <h1 className="text-5xl font-black text-white leading-tight mb-6">
+            Deliver Happiness,<br/>
+            Earn on Your <span className="text-emerald-400">Terms.</span>
+          </h1>
+          <p className="text-emerald-100/60 text-lg max-w-md leading-relaxed">
+            Join the region's fastest growing grocery network. Get paid weekly, choose your hours, and help families get fresh food.
+          </p>
+        </div>
+
+        <div className="relative z-10 space-y-6">
+          <div className="flex items-center gap-4 group">
+             <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center border border-white/5 group-hover:border-emerald-500/30 transition-colors">
+                <ShieldCheck className="text-emerald-400" size={24} />
+             </div>
+             <div>
+                <div className="text-white font-bold text-sm">Flexible Insurance</div>
+                <div className="text-emerald-100/40 text-xs">Full coverage during active shifts</div>
+             </div>
+          </div>
+          <div className="flex items-center gap-4 group">
+             <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center border border-white/5 group-hover:border-emerald-500/30 transition-colors">
+                <BadgeCheck className="text-emerald-400" size={24} />
+             </div>
+             <div>
+                <div className="text-white font-bold text-sm">Instant Payouts</div>
+                <div className="text-emerald-100/40 text-xs">Withdraw earnings after every trip</div>
+             </div>
+          </div>
         </div>
       </div>
 
-      {/* Right panel - form */}
-      <div style={styles.formPanel}>
-        <div style={styles.card}>
-          <h2 style={styles.title}>Become a Driver</h2>
-          <p style={styles.sub}>Fill in your details to start delivering</p>
+      {/* Right side - Registration Form */}
+      <div className="flex-1 flex items-center justify-center p-8 md:p-16 bg-slate-50/30">
+        <div className="w-full max-w-xl">
+           <div className="mb-10 text-center lg:text-left">
+              <h2 className="text-3xl font-black text-slate-800 mb-2">Partner Registration</h2>
+              <p className="text-slate-500 text-sm">Tell us about yourself and your vehicle</p>
+           </div>
 
-          {success ? (
-            <div style={styles.successBanner}>
-              <span style={{ fontSize: 48 }}>✅</span>
-              <p style={{ margin: '12px 0 4px', color: '#065f46', fontWeight: 800, fontSize: 18 }}>
-                Registered Successfully!
-              </p>
-              <p style={{ margin: 0, color: '#6b7280', fontSize: 14 }}>
-                Redirecting to your dashboard…
-              </p>
-              <div style={{ marginTop: 16, width: 40, height: 40, border: '4px solid #d1fae5',
-                            borderTop: '4px solid #047857', borderRadius: '50%',
-                            animation: 'spin 0.8s linear infinite', margin: '16px auto 0' }} />
-            </div>
-          ) : (
-            <form onSubmit={submit} style={styles.form}>
-              {error && <div style={styles.errorBanner}>{error}</div>}
+           <form onSubmit={submit} className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-xl shadow-slate-200/40 border border-slate-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                 
+                 <div className="col-span-1 md:col-span-2 space-y-1.5">
+                    <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest px-1">Full Identity Name</label>
+                    <div className="relative">
+                       <input 
+                         name="name" required value={form.name} onChange={handle}
+                         className="w-full bg-slate-50 border-none rounded-2xl px-5 py-3.5 text-slate-700 text-sm focus:ring-2 focus:ring-emerald-500 transition-all font-medium"
+                         placeholder="John Doe"
+                       />
+                    </div>
+                 </div>
 
-              <Row>
-                <Field label="Full Name" name="name" value={form.name} onChange={handle} required />
-                <Field label="User ID" name="userId" value={form.userId} onChange={handle} required />
-              </Row>
-              <Row>
-                <Field label="Email" name="email" type="email" value={form.email} onChange={handle} required />
-                <Field label="Phone" name="phone" type="tel" value={form.phone} onChange={handle} required />
-              </Row>
-              <Row>
-                <div style={{ flex: 1 }}>
-                  <label style={styles.label}>Vehicle Type</label>
-                  <select name="vehicleType" value={form.vehicleType} onChange={handle} style={styles.select}>
-                    {VEHICLE_TYPES.map(v => <option key={v}>{v}</option>)}
-                  </select>
-                </div>
-                <Field label="License Plate" name="licensePlate" value={form.licensePlate} onChange={handle} />
-              </Row>
-              <Field
-                label="Max Carry Weight (kg)"
-                name="maxCarryWeightKg"
-                type="number"
-                value={form.maxCarryWeightKg}
-                onChange={handle}
-                min={1} max={200}
-              />
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest px-1">Email Address</label>
+                    <input 
+                      type="email" name="email" required value={form.email} onChange={handle}
+                      className="w-full bg-slate-50 border-none rounded-2xl px-5 py-3.5 text-slate-700 text-sm focus:ring-2 focus:ring-emerald-500 transition-all"
+                      placeholder="john@example.com"
+                    />
+                 </div>
 
-              <button type="submit" style={{ ...styles.btn, opacity: loading ? 0.7 : 1 }} disabled={loading}>
-                {loading ? 'Registering…' : 'Register as Driver →'}
-              </button>
-            </form>
-          )}
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest px-1">Mobile Number</label>
+                    <input 
+                      type="tel" name="phone" required value={form.phone} onChange={handle}
+                      className="w-full bg-slate-50 border-none rounded-2xl px-5 py-3.5 text-slate-700 text-sm focus:ring-2 focus:ring-emerald-500 transition-all"
+                      placeholder="+94 7X XXX XXXX"
+                    />
+                 </div>
+
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest px-1">Unified User ID</label>
+                    <input 
+                      name="userId" required value={form.userId} onChange={handle}
+                      className="w-full bg-slate-50 border-none rounded-2xl px-5 py-3.5 text-slate-700 text-sm focus:ring-2 focus:ring-emerald-500 transition-all font-mono"
+                      placeholder="USER-XXXX"
+                    />
+                 </div>
+
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest px-1">Vehicle Category</label>
+                    <select 
+                      name="vehicleType" value={form.vehicleType} onChange={handle}
+                      className="w-full bg-slate-50 border-none rounded-2xl px-5 py-3.5 text-slate-700 text-sm focus:ring-2 focus:ring-emerald-500 transition-all appearance-none"
+                    >
+                      {VEHICLE_TYPES.map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                 </div>
+
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest px-1">License Plate</label>
+                    <input 
+                      name="licensePlate" value={form.licensePlate} onChange={handle}
+                      className="w-full bg-slate-50 border-none rounded-2xl px-5 py-3.5 text-slate-700 text-sm focus:ring-2 focus:ring-emerald-500 transition-all uppercase"
+                      placeholder="WP-BCE-1234"
+                    />
+                 </div>
+
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest px-1">Capacity (KG)</label>
+                    <input 
+                      type="number" name="maxCarryWeightKg" value={form.maxCarryWeightKg} onChange={handle}
+                      className="w-full bg-slate-50 border-none rounded-2xl px-5 py-3.5 text-slate-700 text-sm focus:ring-2 focus:ring-emerald-500 transition-all"
+                    />
+                 </div>
+
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-slate-50 space-y-4">
+                 <button 
+                   type="submit" disabled={loading}
+                   className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-2xl shadow-xl shadow-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                 >
+                   {loading ? <Spinner size="sm" /> : <>Start Delivering Now <ArrowRight size={18} /></>}
+                 </button>
+                 <p className="text-[10px] text-center text-slate-400 px-8">
+                    By clicking "Start Delivering Now", you agree to our Fleet Partnership Terms and Privacy Policy.
+                 </p>
+              </div>
+           </form>
         </div>
       </div>
     </div>
   );
 }
-
-function Row({ children }) {
-  return <div style={{ display: 'flex', gap: 12 }}>{children}</div>;
-}
-
-function Field({ label, ...props }) {
-  return (
-    <div style={{ flex: 1, marginBottom: 14 }}>
-      <label style={styles.label}>{label}</label>
-      <input {...props} style={styles.input} />
-    </div>
-  );
-}
-
-const styles = {
-  page:       { display: 'flex', minHeight: '100vh', fontFamily: "'Nunito', sans-serif" },
-  hero:       { flex: 1, background: 'linear-gradient(160deg, #064e3b 0%, #065f46 60%, #047857 100%)',
-                display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                alignItems: 'center', padding: 40, color: '#fff' },
-  leaf:       { fontSize: 56, marginBottom: 8 },
-  brand:      { fontSize: 42, fontWeight: 800, margin: '0 0 8px', letterSpacing: -1 },
-  tagline:    { fontSize: 18, opacity: 0.85, textAlign: 'center', lineHeight: 1.6, margin: '0 0 40px' },
-  stats:      { display: 'flex', gap: 32 },
-  stat:       { textAlign: 'center' },
-  statVal:    { display: 'block', fontSize: 28, fontWeight: 800, color: '#6ee7b7' },
-  statLbl:    { display: 'block', fontSize: 12, opacity: 0.75, marginTop: 2 },
-  formPanel:  { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: '#f0fdf4', padding: 40 },
-  card:       { background: '#fff', borderRadius: 20, padding: '40px 36px',
-                boxShadow: '0 8px 40px rgba(0,0,0,0.09)', width: '100%', maxWidth: 520 },
-  title:      { fontSize: 28, fontWeight: 800, margin: '0 0 4px', color: '#064e3b' },
-  sub:        { fontSize: 14, color: '#6b7280', margin: '0 0 24px' },
-  form:       { display: 'flex', flexDirection: 'column' },
-  label:      { display: 'block', fontSize: 12, fontWeight: 700, color: '#374151',
-                marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
-  input:      { width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14,
-                border: '1.5px solid #d1fae5', outline: 'none', boxSizing: 'border-box',
-                transition: 'border-color 0.2s', background: '#f9fafb' },
-  select:     { width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14,
-                border: '1.5px solid #d1fae5', outline: 'none', background: '#f9fafb' },
-  btn:        { marginTop: 8, padding: '14px 0', borderRadius: 12, border: 'none',
-                background: 'linear-gradient(90deg, #065f46, #047857)',
-                color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer',
-                letterSpacing: 0.3, transition: 'transform 0.15s, box-shadow 0.15s',
-                boxShadow: '0 4px 16px rgba(6,95,70,0.3)' },
-  errorBanner:{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 10,
-                padding: '10px 14px', color: '#b91c1c', fontSize: 14, marginBottom: 16 },
-  successBanner:{ textAlign: 'center', padding: 32 },
-};

@@ -72,13 +72,31 @@ export const Badge = ({ type = 'active', label }) => {
   )
 }
 
-export const FormField = ({ label, error, children }) => (
-  <div>
-    {label && <label className="label">{label}</label>}
-    {children}
-    {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
-  </div>
-)
+export const FormField = ({ label, error, children, value, onChange, type = 'text', required = false, disabled = false }) => {
+  if (value !== undefined && onChange !== undefined) {
+    return (
+      <div className="space-y-1">
+        {label && <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{label}</label>}
+        <input 
+           type={type}
+           value={value}
+           onChange={(e) => onChange(e.target.value)}
+           required={required}
+           disabled={disabled}
+           className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 font-medium disabled:opacity-50"
+        />
+        {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      </div>
+    )
+  }
+  return (
+    <div>
+      {label && <label className="label">{label}</label>}
+      {children}
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+    </div>
+  )
+}
 
 export const Table = ({ headers, children, loading, empty }) => (
   <div className="overflow-x-auto">
@@ -107,4 +125,8 @@ export const PageHeader = ({ title, subtitle, action }) => (
     </div>
     {action}
   </div>
+)
+
+export const Card = ({ children, className = "" }) => (
+  <div className={className}>{children}</div>
 )

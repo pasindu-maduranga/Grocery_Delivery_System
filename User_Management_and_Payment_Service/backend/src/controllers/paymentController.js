@@ -143,15 +143,18 @@ const verifyCheckout = async (req, res) => {
         // Step 4: Sync Order to Order & Notification Service
         try {
           const user = await User.findById(userId);
+          const customerName = user?.name || user?.fullName || user?.username || "Guest Customer";
+          const customerEmail = user?.email || "";
+          const customerPhone = user?.phoneNo || user?.phoneNumber || "";
 
           await axios.post(
             `${ORDER_SERVICE_URL}/orders`,
             {
               orderId: order._id.toString(),
               customerId: userId,
-              customerName: user ? user.name : "Unknown Customer",
-              customerEmail: user ? user.email : "",
-              customerPhone: user ? user.phoneNo : "",
+              customerName: customerName,
+              customerEmail: customerEmail,
+              customerPhone: customerPhone,
               items: order.items.map((i) => ({
                 productId: i.productId,
                 name: i.name,
@@ -163,7 +166,11 @@ const verifyCheckout = async (req, res) => {
               shippingCost: order.deliveryFee || 0,
               paymentStatus: "paid",
               paymentMethod: "card",
-              shippingAddress: { street: user?.address || "" },
+              shippingAddress: { 
+                street: user?.address || "",
+                latitude: user?.location?.latitude,
+                longitude: user?.location?.longitude
+              },
             },
           );
           console.log(

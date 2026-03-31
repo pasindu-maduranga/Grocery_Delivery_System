@@ -84,6 +84,13 @@ const parentMenus = [
     order: 9,
     isSuperAdminOnly: false,
   },
+  {
+    name: 'Logistics & Delivery',
+    code: 'DELIVERY_MANAGEMENT',
+    icon: 'truck',
+    order: 10,
+    isSuperAdminOnly: false,
+  },
 ];
 
 // ─── MENUS ────────────────────────────────────────────────────────
@@ -203,6 +210,13 @@ const menus = [
     code: 'ORDERS_MENU',
     parentMenuCode: 'ORDER_MANAGEMENT',
     icon: 'list',
+    order: 1,
+  },
+  {
+    name: 'Delivery & Fleet',
+    code: 'DELIVERY_FLEET',
+    parentMenuCode: 'DELIVERY_MANAGEMENT',
+    icon: 'navigation',
     order: 1,
   },
 ];
@@ -439,6 +453,39 @@ const screens = [
     route: '/orders/:id',
     description: 'Admin: View order details and update status',
     order: 2,
+  },
+  // ── Delivery Management ──
+  {
+    name: 'Order Assignment',
+    code: 'SCREEN_DELIVERY_ASSIGNMENT',
+    menuCode: 'DELIVERY_FLEET',
+    route: '/admin/delivery-assignment',
+    description: 'Admin: Assign orders to nearby drivers (FIFO)',
+    order: 1,
+  },
+  {
+    name: 'Driver Dashboard',
+    code: 'SCREEN_DRIVER_DASHBOARD',
+    menuCode: 'DELIVERY_FLEET',
+    route: '/driver/dashboard',
+    description: 'Driver: Manage availability and current deliveries',
+    order: 2,
+  },
+  {
+    name: 'All Drivers',
+    code: 'SCREEN_ALL_DRIVERS',
+    menuCode: 'DELIVERY_FLEET',
+    route: '/admin/drivers',
+    description: 'Admin: Manage all delivery person profiles',
+    order: 3,
+  },
+  {
+    name: 'My Orders',
+    code: 'SCREEN_DRIVER_MY_ORDERS',
+    menuCode: 'DELIVERY_FLEET',
+    route: '/driver/orders',
+    description: 'Driver: View and manage assigned delivery tasks',
+    order: 4,
   },
 ];
 
