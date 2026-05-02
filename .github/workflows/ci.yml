@@ -93,25 +93,29 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: 🚀 Update Container Apps
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          RG_NAME: ${{ env.RG_NAME }}
         run: |
           ACR_SERVER=${{ needs.build-and-push.outputs.acr_server }}
           
-          # Deploy with Environment Variables from GitHub Secrets
-          az containerapp update -n grocery-backend -g ${{ env.RG_NAME }} \
+          # Deploy with Environment Variables
+          az containerapp update -n grocery-backend -g $RG_NAME \
             --image $ACR_SERVER/grocery-backend:${{ github.sha }} \
-            --set-env-vars MONGO_URI=${{ secrets.MONGO_URI }} JWT_SECRET=${{ secrets.JWT_SECRET }}
+            --set-env-vars MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET
 
-          az containerapp update -n user-service -g ${{ env.RG_NAME }} \
+          az containerapp update -n user-service -g $RG_NAME \
             --image $ACR_SERVER/user-service:${{ github.sha }} \
-            --set-env-vars MONGO_URI=${{ secrets.MONGO_URI }}
+            --set-env-vars MONGO_URI=$MONGO_URI
 
-          az containerapp update -n delivery-backend -g ${{ env.RG_NAME }} \
+          az containerapp update -n delivery-backend -g $RG_NAME \
             --image $ACR_SERVER/delivery-backend:${{ github.sha }} \
-            --set-env-vars MONGO_URI=${{ secrets.MONGO_URI }}
+            --set-env-vars MONGO_URI=$MONGO_URI
 
-          az containerapp update -n order-service -g ${{ env.RG_NAME }} \
+          az containerapp update -n order-service -g $RG_NAME \
             --image $ACR_SERVER/order-service:${{ github.sha }} \
-            --set-env-vars MONGO_URI=${{ secrets.MONGO_URI }} JWT_SECRET=${{ secrets.JWT_SECRET }}
+            --set-env-vars MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET
 
-          az containerapp update -n admin-frontend -g ${{ env.RG_NAME }} --image $ACR_SERVER/admin-frontend:${{ github.sha }}
-          az containerapp update -n customer-frontend -g ${{ env.RG_NAME }} --image $ACR_SERVER/customer-frontend:${{ github.sha }}
+          az containerapp update -n admin-frontend -g $RG_NAME --image $ACR_SERVER/admin-frontend:${{ github.sha }}
+          az containerapp update -n customer-frontend -g $RG_NAME --image $ACR_SERVER/customer-frontend:${{ github.sha }}
