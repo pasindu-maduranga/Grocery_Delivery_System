@@ -6,7 +6,7 @@ import {
    CreditCard, Search, Calendar, Download,
    ArrowUpRight, ArrowDownLeft, FileText,
    Table as TableIcon, Filter, ExternalLink,
-   ChevronRight, IndianRupee, Receipt, CheckCircle2,
+   ChevronRight, Banknote, Receipt, CheckCircle2,
    TrendingUp
 } from 'lucide-react'
 import React from 'react'
@@ -114,7 +114,7 @@ export default function TransactionsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                <div className="bg-emerald-900 rounded-[2rem] p-8 shadow-2xl shadow-emerald-900/20 relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
-                     <CreditCard size={120} />
+                     <Banknote size={120} />
                   </div>
                   <p className="text-emerald-400 text-xs font-black uppercase tracking-widest mb-1">
                      {isSupplier ? 'Total Revenue Earned' : 'Total Supplier Payouts'}

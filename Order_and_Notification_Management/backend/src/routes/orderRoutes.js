@@ -3,6 +3,7 @@ const router  = express.Router();
 const {
   receiveOrder,
   getAllOrders,
+  getMyOrders,
   getOrderById,
   updateOrderStatus,
   getOrderStats,
@@ -15,6 +16,9 @@ const { protect } = require('../middleware/auth');
 
 // Public — receives orders pushed from the customer service
 router.post('/', receiveOrder);
+
+// Protected — customer orders
+router.get('/my-orders', protect, getMyOrders);
 
 // Protected — admin only
 router.get('/stats', protect, getOrderStats);

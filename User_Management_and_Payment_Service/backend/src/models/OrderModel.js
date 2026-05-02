@@ -33,7 +33,7 @@ const orderSchema = new mongoose.Schema(
     address: { type: String },
     phoneNo: { type: String },
   },
-  { timestamps: true }
+  { timestamps: true, collection: 'payment_drafts' }
 );
 
 module.exports = mongoose.model("Order", orderSchema);

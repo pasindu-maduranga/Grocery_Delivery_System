@@ -6,7 +6,7 @@ const generateToken = (user) => {
             id: user.id,
             role: user.role,
         },
-        process.env.JWT_SECRET,
+        process.env.JWT_SECRET || 'rapidcart_secret_key_2026',
         {
             expiresIn: String(process.env.JWT_EXPIRES_IN || '1d').replace(/['"]/g, '')
         },

@@ -1,8 +1,8 @@
 import api from "./userApi";
 
-// Stripe checkout session creation
-export const createCheckoutSession = (items, currency = "usd") =>
-  api.post("/payment/create-checkout-session", { items, currency });
+// Start checkout (both COD and Stripe)
+export const processCheckout = (payload) =>
+  api.post("/payment/process-checkout", payload);
 
 export const verifyCheckout = (sessionId) =>
   api.post("/payment/verify-checkout", { sessionId });

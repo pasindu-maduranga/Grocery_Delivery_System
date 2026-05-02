@@ -1,7 +1,7 @@
 services:
   # Grocery Store Management Backend
   grocery-backend:
-    build: 
+    build:
       context: ./Grocery_Store_Management/backend/src
       args:
         - PORT=5000
@@ -10,6 +10,8 @@ services:
       - "5000:5000"
     env_file:
       - ./Grocery_Store_Management/backend/src/.env
+    environment:
+      - DELIVERY_SERVICE_URL=http://delivery-service:5005/api
     restart: unless-stopped
     networks:
       - grocery-network
@@ -22,6 +24,10 @@ services:
       - "5003:5003"
     env_file:
       - ./User_Management_and_Payment_Service/backend/.env
+    environment:
+      - ORDER_SERVICE_URL=http://order-service:5004/api
+      - GROCERY_SERVICE_URL=http://grocery-store-backend:5000/api
+      - DELIVERY_SERVICE_URL=http://delivery-service:5005/api
     volumes:
       - ./User_Management_and_Payment_Service/backend/uploads:/app/uploads
     restart: unless-stopped
@@ -33,7 +39,7 @@ services:
     build: ./Delivery_Management/backend
     container_name: delivery-service
     ports:
-      - "5001:5001"
+      - "5005:5005"
     env_file:
       - ./Delivery_Management/backend/.env
     restart: unless-stopped
@@ -48,16 +54,21 @@ services:
       - "5004:5004"
     env_file:
       - ./Order_and_Notification_Management/backend/.env
+    environment:
+      - USER_SERVICE_URL=http://user-payment-service:5003/api
     restart: unless-stopped
     networks:
       - grocery-network
+
   # Admin Frontend
   admin-frontend:
-    build: 
+    build:
       context: ./frontend
       args:
-        - VITE_API_URL=http://localhost:5000/api
-        - VITE_API_URL_ORDER=http://localhost:5004/api
+        - VITE_API_URL=http://127.0.0.1:5000/api
+        - VITE_API_URL_ORDER=http://127.0.0.1:5004/api
+        - VITE_DELIVERY_SERVICE_URL=http://127.0.0.1:5005/api
+        - VITE_USER_SERVICE_URL=http://127.0.0.1:5003/api
     container_name: admin-dashboard
     ports:
       - "5173:80"
@@ -67,11 +78,12 @@ services:
 
   # Customer Frontend
   customer-frontend:
-    build: 
+    build:
       context: ./frontend-customer
       args:
-        - VITE_API_URL_USER_MANAGEMENT_SERVICE=http://localhost:5003/api
-        - VITE_API_URL_GROCERY_MANAGEMENT_SERVICE=http://localhost:5000/api
+        - VITE_API_URL_USER_MANAGEMENT_SERVICE=http://127.0.0.1:5003/api
+        - VITE_API_URL_GROCERY_MANAGEMENT_SERVICE=http://127.0.0.1:5000/api
+        - VITE_DELIVERY_SERVICE_URL=http://127.0.0.1:5005/api
         - VITE_STRIPE_PUBLISHABLE_KEY=pk_test_51T8FA0CHMdOpXSyUdEp5T6KaDuOecXRk4IfE8Hqf15trW1kIOaXW0iyMvYOXJ7UhKyLYKXv1kInx2VQxXgiav2aU00tsvkgszS
     container_name: customer-app
     ports:

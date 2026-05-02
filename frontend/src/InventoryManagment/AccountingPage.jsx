@@ -4,7 +4,7 @@ import Layout from '../components/layout/Layout'
 import { PageLoader, Spinner } from '../components/common/index'
 import { 
   TrendingUp, BarChart3, PieChart as PieChartIcon, 
-  Calendar, RefreshCw, Layers, DollarSign,
+  Calendar, RefreshCw, Layers, Banknote,
   ArrowUpRight, ArrowDownRight, Package, Users
 } from 'lucide-react'
 import { 
@@ -62,7 +62,7 @@ export default function AccountingPage() {
            <KPICard title="Gross Payouts" value={overallStats.totalPaid} icon={<Layers />} color="emerald" sub="Total liquidity flow" />
            <KPICard title="Realized Profit" value={overallStats.totalProfit} icon={<TrendingUp />} color="blue" sub="Net system margin" trend="+12.5%" />
            <KPICard title="Total Settlements" value={overallStats.totalTransactions} icon={<Package />} color="amber" sub="Verified submissions" isCurrency={false} />
-           <KPICard title="Avg. Settlement" value={overallStats.avgTransaction} icon={<DollarSign />} color="indigo" sub="Mean payout per batch" />
+           <KPICard title="Avg. Settlement" value={overallStats.avgTransaction} icon={<Banknote />} color="indigo" sub="Mean payout per batch" />
         </div>
 
         {/* Main Charts Row */}

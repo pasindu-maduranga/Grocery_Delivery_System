@@ -1,13 +1,31 @@
 // src/pages/DriverDashboardPage.jsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { driverApi } from '../api/deliveryApi';
 import { useSocket } from '../context/SocketContext';
 import OrderCard from '../components/OrderCard';
 import AssignmentToast from '../components/AssignmentToast';
+import { MapPin, Navigation, Crosshair, Map as MapIcon, Shield, Radio, Layers, Zap, Clock, Activity, Target } from 'lucide-react';
+import { toast } from 'sonner';
 
-export default function DriverDashboardPage({ driverId }) {
+// Marker Fix
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+const DefaultIcon = L.icon({
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
+L.Marker.prototype.options.icon = DefaultIcon;
+
+export default function DriverDashboardPage({ driverId: propDriverId }) {
   const navigate = useNavigate();
+  const driverId = propDriverId || localStorage.getItem('fc_driver_id');
+  
   const [driver, setDriver]               = useState(null);
   const [pendingOrders, setPendingOrders] = useState([]);
   const [currentOrders, setCurrentOrders] = useState([]);
@@ -15,6 +33,11 @@ export default function DriverDashboardPage({ driverId }) {
   const [toggling, setToggling]           = useState(false);
   const [isOnline, setIsOnline]           = useState(false);
   const [tab, setTab]                     = useState('pending');
+  const [location, setLocation]           = useState({ lat: 6.9271, lng: 79.8612 });
+  const [updatingLoc, setUpdatingLoc]     = useState(false);
+  const [autoTracking, setAutoTracking]   = useState(false);
+  const trackingIntervalRef               = useRef(null);
+  
   const { connected, newAssignment, clearAssignment, goOnline, goOffline } = useSocket();
 
   const fetchAll = useCallback(async () => {
@@ -30,6 +53,10 @@ export default function DriverDashboardPage({ driverId }) {
       setIsOnline(d?.isAvailable || false);
       setPendingOrders(Array.isArray(pending) ? pending : []);
       setCurrentOrders(Array.isArray(current) ? current : []);
+      
+      if (d?.currentLocation?.latitude) {
+        setLocation({ lat: d.currentLocation.latitude, lng: d.currentLocation.longitude });
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -43,345 +70,289 @@ export default function DriverDashboardPage({ driverId }) {
     if (newAssignment) { fetchAll(); }
   }, [newAssignment, fetchAll]);
 
-  // ✅ FIXED toggle
+  // Handle auto-tracking
+  useEffect(() => {
+    if (autoTracking && isOnline) {
+      trackingIntervalRef.current = setInterval(updateLiveLocation, 30000); // 30s
+    } else {
+      if (trackingIntervalRef.current) clearInterval(trackingIntervalRef.current);
+    }
+    return () => { if (trackingIntervalRef.current) clearInterval(trackingIntervalRef.current); };
+  }, [autoTracking, isOnline]);
+
+  const updateLiveLocation = () => {
+    if (!driverId) return;
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const { latitude, longitude } = pos.coords;
+          setLocation({ lat: latitude, lng: longitude });
+          try {
+            await driverApi.updateLocation(driverId, latitude, longitude);
+          } catch (err) {
+             console.error("Auto-sync failed", err);
+          }
+        },
+        null,
+        { enableHighAccuracy: true }
+      );
+    }
+  };
+
+  const handleManualLocationUpdate = async (newPos) => {
+    if (!driverId) return;
+    setUpdatingLoc(true);
+    setLocation(newPos);
+    try {
+      await driverApi.updateLocation(driverId, newPos.lat, newPos.lng);
+      toast.success('Live position updated!');
+      setDriver(prev => ({ 
+        ...prev, 
+        currentLocation: { latitude: newPos.lat, longitude: newPos.lng } 
+      }));
+    } catch (err) {
+      toast.error('Sync failed');
+    } finally {
+      setUpdatingLoc(false);
+    }
+  };
+
   const toggleAvailability = async () => {
-    if (!driver || toggling) return;
+    if (!driverId || !driver || toggling) return;
     setToggling(true);
     const next = !isOnline;
-    setIsOnline(next);
     try {
       await driverApi.updateAvailability(driverId, next);
       if (next) {
-        goOnline(driverId, driver.currentLocation || { latitude: 6.9271, longitude: 79.8612 });
+        goOnline(driverId, { latitude: location.lat, longitude: location.lng });
       } else {
         goOffline(driverId);
+        setAutoTracking(false);
       }
+      setIsOnline(next);
       setDriver(d => ({ ...d, isAvailable: next }));
     } catch (err) {
       console.error(err);
-      setIsOnline(!next);
+      toast.error("Cloud toggle failed");
     } finally {
       setToggling(false);
     }
   };
 
-  const handleAccept = async (orderId) => {
-    try { await driverApi.acceptOrder(driverId, orderId); await fetchAll(); }
-    catch (err) { console.error(err); }
+  const MapEvents = () => {
+    useMapEvents({
+      click(e) {
+        handleManualLocationUpdate(e.latlng);
+      },
+    });
+    return null;
   };
 
-  const handleReject = async (orderId) => {
-    try { await driverApi.rejectOrder(driverId, orderId, 'Driver unavailable'); await fetchAll(); }
-    catch (err) { console.error(err); }
-  };
-
-  const handleComplete = async (orderId) => {
-    try { await driverApi.completeDelivery(driverId, orderId); await fetchAll(); }
-    catch (err) { console.error(err); }
+  const RecenterMap = ({ center }) => {
+    const map = useMap();
+    useEffect(() => { map.setView([center.lat, center.lng], 15); }, [center, map]);
+    return null;
   };
 
   if (loading) return <Loading />;
-
-  if (!driverId) {
-    return (
-      <div style={{ minHeight:'100vh', background:'#f0fdf4', display:'flex', alignItems:'center',
-                    justifyContent:'center', flexDirection:'column', gap:16, fontFamily:"'Nunito',sans-serif" }}>
-        <div style={{ fontSize:56 }}>🚗</div>
-        <h2 style={{ margin:0, color:'#064e3b', fontWeight:900 }}>No driver ID found</h2>
-        <p style={{ margin:0, color:'#6b7280' }}>Please register as a driver first</p>
-        <a href="/driver/register" style={{ padding:'12px 28px', borderRadius:12, background:'linear-gradient(90deg,#065f46,#047857)',
-                                             color:'#fff', fontWeight:800, fontSize:14, textDecoration:'none' }}>
-          Register Now →
-        </a>
-      </div>
-    );
-  }
+  if (!driverId) return <NoDriver navigate={navigate} />;
 
   const shown    = tab === 'pending' ? pendingOrders : currentOrders;
   const initials = driver?.name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || '?';
 
   return (
-    <div style={{ minHeight:'100vh', background:'#f0fdf4', fontFamily:"'Nunito',sans-serif" }}>
+    <div className="min-h-screen bg-[#fcfdfd] font-sans pb-12">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-        @keyframes spin    { to { transform: rotate(360deg); } }
-        @keyframes fadeUp  { from{transform:translateY(12px);opacity:0} to{transform:translateY(0);opacity:1} }
-        @keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.4} }
-        @keyframes ping    { 0%{transform:scale(1);opacity:0.8} 100%{transform:scale(2.5);opacity:0} }
-        .fc-order { animation: fadeUp 0.3s ease both; }
-        .fc-toggle:hover:not(:disabled) { transform: scale(1.03); box-shadow: 0 6px 20px rgba(0,0,0,0.2) !important; }
-        .fc-toggle:active:not(:disabled) { transform: scale(0.97); }
-        .fc-tab:hover { opacity: 0.88; }
-        .fc-stat:hover { transform: translateY(-3px); }
+        @keyframes scan { from { transform: translateY(-50%); opacity: 0; } to { transform: translateY(50%); opacity: 0.5; } }
+        .map-scan-line { position: absolute; inset: 0; background: linear-gradient(180deg, transparent, #10b981, transparent); height: 2px; animation: scan 2s linear infinite; pointer-events: none; z-index: 1000; }
+        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.5); }
       `}</style>
-
+      
       {newAssignment && (
         <AssignmentToast
           assignment={newAssignment}
-          onAccept={() => { handleAccept(newAssignment.orderId); clearAssignment(); }}
-          onReject={() => { handleReject(newAssignment.orderId); clearAssignment(); }}
+          onAccept={() => { driverApi.acceptOrder(driverId, newAssignment.orderId); clearAssignment(); fetchAll(); }}
+          onReject={() => { driverApi.rejectOrder(driverId, newAssignment.orderId, 'Busy'); clearAssignment(); }}
           onDismiss={clearAssignment}
         />
       )}
 
       {/* ── HEADER ── */}
-      <header style={{ background:'linear-gradient(90deg,#052e16,#064e3b)', padding:'14px 24px',
-                       display:'flex', justifyContent:'space-between', alignItems:'center',
-                       boxShadow:'0 4px 24px rgba(0,0,0,0.25)', position:'sticky', top:0, zIndex:100 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ width:36, height:36, borderRadius:10, background:'rgba(255,255,255,0.12)',
-                        display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>🌿</div>
+      <nav className="bg-[#0d1f12] px-6 py-4 flex items-center justify-between shadow-[0_10px_40px_-15px_rgba(0,0,0,0.3)] sticky top-0 z-[1000]">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+            <Zap size={20} />
+          </div>
           <div>
-            <div style={{ color:'#fff', fontWeight:900, fontSize:16, letterSpacing:-0.5 }}>FreshCart</div>
-            <div style={{ color:'#6ee7b7', fontSize:9, fontWeight:700, letterSpacing:2 }}>DRIVER PORTAL</div>
+            <h1 className="text-white font-black text-lg tracking-tight">RapidCart</h1>
+            <p className="text-[9px] text-emerald-400 font-bold uppercase tracking-[0.2em]">Pilot Operations</p>
           </div>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8, background:'rgba(255,255,255,0.08)',
-                        border:'1px solid rgba(255,255,255,0.12)', borderRadius:20, padding:'6px 14px' }}>
-            <div style={{ position:'relative', width:10, height:10 }}>
-              {connected && <div style={{ position:'absolute', inset:0, borderRadius:'50%',
-                                           background:'#34d399', animation:'ping 1.5s ease-out infinite' }} />}
-              <div style={{ position:'relative', width:10, height:10, borderRadius:'50%',
-                            background: connected ? '#34d399' : '#f87171',
-                            boxShadow: connected ? '0 0 8px #34d399' : 'none' }} />
-            </div>
-            <span style={{ color:'#d1fae5', fontSize:12, fontWeight:700 }}>
-              {connected ? 'Live' : 'Disconnected'}
-            </span>
+
+        <div className="flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-white/5 rounded-full border border-white/10">
+             <div className="relative flex h-2 w-2">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${connected ? 'bg-emerald-400' : 'bg-red-400'}`}></span>
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${connected ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+             </div>
+             <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">{connected ? 'Relay Active' : 'Offline Mode'}</span>
           </div>
-          {/* ✅ Profile button */}
-          <button
-            onClick={() => navigate('/driver/profile')}
-            title="View Profile"
-            style={{
-              width:38, height:38, borderRadius:'50%', border:'2px solid rgba(255,255,255,0.25)',
-              background:'linear-gradient(135deg,#065f46,#10b981)',
-              color:'#fff', fontSize:15, fontWeight:900, cursor:'pointer',
-              display:'flex', alignItems:'center', justifyContent:'center',
-              flexShrink:0, transition:'transform 0.15s, box-shadow 0.15s',
-              boxShadow:'0 2px 8px rgba(0,0,0,0.2)',
-            }}
-            onMouseEnter={e => e.currentTarget.style.transform='scale(1.1)'}
-            onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}
-          >
-            {initials}
+          
+          <button onClick={() => navigate('/driver/profile')} className="w-10 h-10 rounded-full border-2 border-emerald-500/30 flex items-center justify-center bg-emerald-500 text-white font-black text-sm shadow-xl shadow-emerald-500/20">
+             {initials}
           </button>
         </div>
-      </header>
+      </nav>
 
-      <div style={{ maxWidth:1200, margin:'0 auto', padding:'20px 32px 48px' }}>
-
-        {/* ── HERO CARD ── */}
-        <div style={{
-          borderRadius:24, padding:'28px 32px 24px', marginBottom:20,
-          position:'relative', overflow:'hidden',
-          background: isOnline
-            ? 'linear-gradient(145deg,#052e16 0%,#065f46 60%,#047857 100%)'
-            : 'linear-gradient(145deg,#111827 0%,#1f2937 60%,#374151 100%)',
-          boxShadow: isOnline
-            ? '0 16px 48px rgba(6,79,58,0.4)'
-            : '0 16px 48px rgba(0,0,0,0.3)',
-          transition:'background 0.6s ease, box-shadow 0.6s ease',
-        }}>
-          {/* Decorative circles */}
-          <div style={{ position:'absolute', top:-60, right:-60, width:200, height:200,
-                        borderRadius:'50%', background:'rgba(255,255,255,0.03)', pointerEvents:'none' }} />
-          <div style={{ position:'absolute', bottom:-40, left:-40, width:140, height:140,
-                        borderRadius:'50%', background:'rgba(255,255,255,0.03)', pointerEvents:'none' }} />
-
-          {/* Driver info row */}
-          <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:20, position:'relative', zIndex:1 }}>
-
-            {/* Avatar */}
-            <div style={{ position:'relative', flexShrink:0 }}>
-              <div style={{ width:64, height:64, borderRadius:'50%',
-                            background:'rgba(255,255,255,0.15)', backdropFilter:'blur(8px)',
-                            border:'2px solid rgba(255,255,255,0.25)',
-                            display:'flex', alignItems:'center', justifyContent:'center',
-                            color:'#fff', fontSize:22, fontWeight:900 }}>
-                {initials}
+      <div className="max-w-7xl mx-auto px-6 pt-8 grid grid-cols-1 xl:grid-cols-12 gap-8">
+        
+        {/* LEFT COLUMN: Operational Status */}
+        <div className="xl:col-span-4 space-y-6">
+           
+           {/* Pilot Profile Card */}
+           <div className={`p-8 rounded-[2.5rem] transition-all duration-700 relative overflow-hidden shadow-2xl ${isOnline ? 'bg-emerald-600 shadow-emerald-600/20' : 'bg-slate-900 shadow-slate-950/40'}`}>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl" />
+              
+              <div className="flex items-center gap-5 mb-8">
+                 <div className="w-16 h-16 rounded-[1.5rem] bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white font-black text-2xl">
+                    {initials}
+                 </div>
+                 <div>
+                    <h2 className="text-white font-black text-xl leading-tight">{driver?.name}</h2>
+                    <p className="text-emerald-100/50 text-[10px] uppercase font-bold tracking-widest mt-1">
+                       {driver?.vehicleType} · {driver?.licensePlate || 'Fleet XP'}
+                    </p>
+                 </div>
               </div>
-              <div style={{ position:'absolute', bottom:1, right:1, width:16, height:16,
-                            borderRadius:'50%', border:'2.5px solid rgba(255,255,255,0.2)',
-                            background: isOnline ? '#34d399' : '#9ca3af',
-                            boxShadow: isOnline ? '0 0 8px #34d399' : 'none',
-                            transition:'all 0.4s' }} />
-            </div>
 
-            {/* Name & meta */}
-            <div style={{ flex:1 }}>
-              <h2 style={{ margin:'0 0 3px', fontSize:20, fontWeight:900, color:'#fff', letterSpacing:-0.5 }}>
-                {driver?.name || 'Driver'}
-              </h2>
-              <p style={{ margin:'0 0 6px', fontSize:12, color:'rgba(255,255,255,0.6)' }}>
-                🚗 {driver?.vehicleType || 'Car'}{driver?.licensePlate ? ` · ${driver.licensePlate}` : ''}
-              </p>
-              <div style={{ display:'flex', alignItems:'center', gap:2 }}>
-                {[1,2,3,4,5].map(n => (
-                  <span key={n} style={{ fontSize:12,
-                    color: n <= Math.round(driver?.rating?.average||0) ? '#fbbf24' : 'rgba(255,255,255,0.2)' }}>★</span>
-                ))}
-                <span style={{ color:'rgba(255,255,255,0.5)', fontSize:11, marginLeft:5 }}>
-                  {driver?.rating?.average?.toFixed(1)||'0.0'} · {driver?.rating?.count||0} trips
-                </span>
+              <div className="flex items-center justify-between bg-black/20 p-4 rounded-2xl mb-8 border border-white/5">
+                 <div>
+                    <p className="text-[9px] font-black text-white/30 uppercase mb-1">Status</p>
+                    <div className="flex items-center gap-2">
+                       <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+                       <span className="text-sm font-black text-white italic">{isOnline ? 'Active Fleet' : 'Offline'}</span>
+                    </div>
+                 </div>
+                 <button 
+                   onClick={toggleAvailability}
+                   disabled={toggling}
+                   className={`h-12 px-6 rounded-xl font-bold text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 ${isOnline ? 'bg-white text-emerald-950' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'}`}
+                 >
+                   {toggling ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : isOnline ? 'Go Offline' : 'Go Live'}
+                 </button>
               </div>
-            </div>
 
-            {/* ✅ TOGGLE BUTTON */}
-            <div style={{ textAlign:'center', flexShrink:0 }}>
-              <div style={{ fontSize:9, color:'rgba(255,255,255,0.5)', fontWeight:700,
-                            letterSpacing:1.5, marginBottom:7 }}>AVAILABILITY</div>
-              <button
-                className="fc-toggle"
-                onClick={toggleAvailability}
-                disabled={toggling}
-                style={{
-                  padding:'11px 20px', borderRadius:14, border:'none',
-                  fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:13,
-                  cursor: toggling ? 'not-allowed' : 'pointer',
-                  transition:'all 0.25s ease',
-                  display:'flex', alignItems:'center', justifyContent:'center', gap:7,
-                  minWidth:118, color:'#fff',
-                  background: isOnline
-                    ? 'linear-gradient(135deg,#34d399,#059669)'
-                    : 'rgba(255,255,255,0.1)',
-                  boxShadow: isOnline ? '0 4px 16px rgba(52,211,153,0.35)' : 'none',
-                  outline: isOnline ? 'none' : '1.5px solid rgba(255,255,255,0.2)',
-                  opacity: toggling ? 0.7 : 1,
-                }}
-              >
-                {toggling ? (
-                  <>
-                    <div style={{ width:12, height:12, border:'2px solid rgba(255,255,255,0.3)',
-                                  borderTop:'2px solid #fff', borderRadius:'50%',
-                                  animation:'spin 0.6s linear infinite' }} />
-                    Please wait
-                  </>
-                ) : isOnline ? '● Online' : '○ Go Online'}
-              </button>
-              <div style={{ fontSize:10, fontWeight:600, marginTop:5, transition:'color 0.3s',
-                            color: isOnline ? '#6ee7b7' : 'rgba(255,255,255,0.35)' }}>
-                {isOnline ? 'Receiving orders' : 'Tap to go live'}
+              <div className="grid grid-cols-2 gap-3">
+                 <div className="p-4 bg-white/5 rounded-2xl border border-white/5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-400/20 rounded-full blur-xl -mr-8 -mt-8" />
+                    <div className="text-[10px] font-black text-white/30 uppercase mb-1 flex items-center gap-1"><Zap size={10} className="text-emerald-400" /> Pending Payout</div>
+                    <div className="text-white font-black text-xl leading-none mt-2 flex items-baseline gap-1">
+                       <span className="text-[10px] text-emerald-400/50">LKR</span> {(driver?.walletBalance || 0).toFixed(2)}
+                    </div>
+                 </div>
+                 <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                    <div className="text-[10px] font-black text-white/30 uppercase mb-1">Total Earned</div>
+                    <div className="text-white font-black text-lg flex items-baseline gap-1">
+                       <span className="text-[10px] text-white/50">LKR</span> {(driver?.totalEarned || 0).toFixed(2)}
+                    </div>
+                 </div>
               </div>
-            </div>
-          </div>
+           </div>
 
-          {/* Stats row */}
-          <div style={{ display:'flex', background:'rgba(0,0,0,0.2)', borderRadius:14,
-                        overflow:'hidden', position:'relative', zIndex:1 }}>
-            {[
-              { icon:'📦', val:pendingOrders.length, lbl:'Pending',     color:'#fbbf24' },
-              { icon:'🚚', val:currentOrders.length, lbl:'In Progress', color:'#60a5fa' },
-              { icon:'✅', val:driver?.completedOrders?.length||0, lbl:'Completed', color:'#34d399' },
-            ].map(({ icon, val, lbl, color }, i) => (
-              <div key={lbl} style={{ flex:1, display:'flex', flexDirection:'column',
-                                      alignItems:'center', gap:3, padding:'13px 8px',
-                                      borderRight: i<2 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
-                <span style={{ fontSize:18 }}>{icon}</span>
-                <span style={{ fontSize:24, fontWeight:900, color, lineHeight:1 }}>{val}</span>
-                <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)', fontWeight:700 }}>{lbl}</span>
+           {/* LOCATION MANAGEMENT */}
+           <div className="bg-white rounded-[2.5rem] p-6 shadow-xl shadow-slate-200/50 border border-slate-50">
+              <div className="flex items-center justify-between mb-6 px-2">
+                 <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                       <Navigation size={16} />
+                    </div>
+                    <h3 className="font-black text-slate-800 text-xs uppercase tracking-widest">Live Tether</h3>
+                 </div>
+                 <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Auto</span>
+                    <button 
+                      onClick={() => setAutoTracking(!autoTracking)}
+                      className={`w-10 h-5 rounded-full transition-colors relative ${autoTracking ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                    >
+                       <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${autoTracking ? 'left-6' : 'left-1'}`} />
+                    </button>
+                 </div>
               </div>
-            ))}
-          </div>
+
+              <div className="h-60 rounded-[2rem] overflow-hidden border-4 border-white shadow-inner relative">
+                 {isOnline && <div className="map-scan-line" />}
+                 <MapContainer center={[location.lat, location.lng]} zoom={15} style={{ height: '100%', width: '100%' }}>
+                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    <Marker position={[location.lat, location.lng]} />
+                    <RecenterMap center={location} />
+                    <MapEvents />
+                 </MapContainer>
+                 
+                 <button 
+                   onClick={updateLiveLocation}
+                   className="absolute bottom-4 right-4 z-[999] bg-white/90 backdrop-blur-md p-2.5 rounded-xl shadow-lg border border-slate-100 text-blue-600 hover:text-blue-700 transition-colors"
+                 >
+                    <Crosshair size={18} />
+                 </button>
+              </div>
+
+              <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                 <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase">Current Coordinates</p>
+                    <p className="text-[10px] font-bold font-mono text-slate-600 italic">
+                       {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
+                    </p>
+                 </div>
+                 <Badge type="info" label={updatingLoc ? "Syncing..." : "Manual Ready"} />
+              </div>
+           </div>
+
         </div>
 
-        {/* ── TABS + ORDERS — two column on wide screens ── */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:20, alignItems:'start' }}>
+        {/* RIGHT COLUMN: Queue Management */}
+        <div className="xl:col-span-8 flex flex-col gap-6">
+           
+           <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setTab('pending')}
+                className={`flex-1 py-4 px-6 rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 ${tab === 'pending' ? 'bg-[#0d1f12] text-white shadow-xl shadow-emerald-950/20' : 'bg-white text-slate-400 border border-slate-100'}`}
+              >
+                 <Zap size={16} /> Pending ({pendingOrders.length})
+              </button>
+              <button 
+                onClick={() => setTab('current')}
+                className={`flex-1 py-4 px-6 rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 ${tab === 'current' ? 'bg-[#0d1f12] text-white shadow-xl shadow-emerald-950/20' : 'bg-white text-slate-400 border border-slate-100'}`}
+              >
+                 <Activity size={16} /> In Transit ({currentOrders.length})
+              </button>
+           </div>
 
-          {/* Left column — tabs + quick stats */}
-          <div>
-            <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:16 }}>
-              {[
-                { key:'pending', icon:'📥', label:'Pending Orders',  count:pendingOrders.length },
-                { key:'current', icon:'🚚', label:'Active Deliveries', count:currentOrders.length },
-              ].map(({ key, icon, label, count }) => (
-                <button key={key} className="fc-tab" onClick={() => setTab(key)} style={{
-                  width:'100%', padding:'16px 20px', borderRadius:16, cursor:'pointer',
-                  fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:15,
-                  transition:'all 0.2s ease', textAlign:'left',
-                  border: `2px solid ${tab===key ? '#064e3b' : '#e5e7eb'}`,
-                  background: tab===key ? '#064e3b' : '#fff',
-                  color:      tab===key ? '#fff'    : '#4b5563',
-                  boxShadow:  tab===key ? '0 4px 16px rgba(6,79,58,0.2)' : '0 2px 8px rgba(0,0,0,0.04)',
-                  display:'flex', alignItems:'center', justifyContent:'space-between',
-                }}>
-                  <span>{icon} {label}</span>
-                  <span style={{
-                    padding:'4px 12px', borderRadius:20, fontSize:14, fontWeight:900,
-                    background: tab===key ? 'rgba(255,255,255,0.18)' : '#f3f4f6',
-                    color:      tab===key ? '#fff' : '#6b7280',
-                  }}>{count}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Quick info card */}
-            <div style={{ background:'#fff', borderRadius:20, padding:20,
-                          boxShadow:'0 4px 20px rgba(0,0,0,0.05)', border:'1.5px solid #d1fae5' }}>
-              <h4 style={{ margin:'0 0 14px', fontSize:13, fontWeight:800,
-                           color:'#064e3b', textTransform:'uppercase', letterSpacing:0.5 }}>
-                Quick Info
-              </h4>
-              {[
-                { label:'Vehicle',  value: `${driver?.vehicleType||'—'} ${driver?.licensePlate ? '· '+driver.licensePlate : ''}` },
-                { label:'Rating',   value: `⭐ ${driver?.rating?.average?.toFixed(1)||'0.0'} (${driver?.rating?.count||0} trips)` },
-                { label:'Status',   value: isOnline ? '🟢 Online' : '🔴 Offline' },
-                { label:'Max Load', value: `${driver?.maxCarryWeightKg||20} kg` },
-              ].map(({ label, value }) => (
-                <div key={label} style={{ display:'flex', justifyContent:'space-between',
-                                          padding:'8px 0', borderBottom:'1px solid #f0fdf4',
-                                          fontSize:13 }}>
-                  <span style={{ color:'#9ca3af', fontWeight:600 }}>{label}</span>
-                  <span style={{ color:'#064e3b', fontWeight:700 }}>{value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Right column — orders list */}
-          <div>
-            <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+           <div className="flex-1 space-y-4 overflow-y-auto max-h-[70vh] custom-scrollbar pr-2">
               {shown.length === 0 ? (
-                <div style={{ textAlign:'center', padding:'64px 24px', background:'#fff',
-                              borderRadius:20, boxShadow:'0 4px 20px rgba(0,0,0,0.05)',
-                              border:'1.5px solid #d1fae5' }}>
-                  <div style={{ fontSize:56, marginBottom:12 }}>{tab==='pending' ? '📭' : '🏁'}</div>
-                  <h3 style={{ margin:'0 0 6px', fontSize:18, fontWeight:800, color:'#064e3b' }}>
-                    {tab==='pending' ? 'No pending assignments' : 'No active deliveries'}
-                  </h3>
-                  <p style={{ margin:'0 0 20px', fontSize:14, color:'#9ca3af' }}>
-                    {tab==='pending'
-                      ? isOnline ? 'Orders will appear here when assigned' : 'Go online to receive orders'
-                      : 'Accepted orders will appear here'}
-                  </p>
-                  {!isOnline && tab==='pending' && (
-                    <button onClick={toggleAvailability} style={{
-                      padding:'12px 32px', borderRadius:12, border:'none', cursor:'pointer',
-                      background:'linear-gradient(90deg,#065f46,#047857)', color:'#fff',
-                      fontWeight:800, fontSize:14, fontFamily:"'Nunito',sans-serif",
-                      boxShadow:'0 4px 16px rgba(6,95,70,0.3)',
-                    }}>Go Online →</button>
-                  )}
+                <div className="bg-white rounded-[3rem] py-24 flex flex-col items-center justify-center shadow-lg shadow-slate-200/50 border border-slate-50 border-dashed border-2">
+                   <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 ${tab === 'pending' ? 'bg-amber-50 text-amber-500' : 'bg-emerald-50 text-emerald-500'}`}>
+                      {tab === 'pending' ? <Clock size={40} /> : <Target size={40} />}
+                   </div>
+                   <h3 className="text-xl font-black text-slate-800 italic uppercase">Queue Clear</h3>
+                   <p className="text-xs text-slate-400 font-bold uppercase mt-2 tracking-widest">{isOnline ? 'Standby for new assignments' : 'Go online to receive jobs'}</p>
                 </div>
               ) : (
                 shown.map((order, i) => (
-                  <div key={order.orderId || order._id} className="fc-order"
-                       style={{ animationDelay:`${i*0.06}s` }}>
+                  <div key={order.orderId || order._id} className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${i * 100}ms` }}>
                     <OrderCard
                       order={order}
                       type={tab}
-                      onAccept={() => handleAccept(order.orderId || order._id)}
-                      onReject={() => handleReject(order.orderId || order._id)}
-                      onComplete={() => handleComplete(order.orderId || order._id)}
+                      onAccept={() => { driverApi.acceptOrder(driverId, order.orderId || order._id); fetchAll(); }}
+                      onReject={() => { driverApi.rejectOrder(driverId, order.orderId || order._id, 'Busy'); fetchAll(); }}
+                      onComplete={() => { driverApi.completeDelivery(driverId, order.orderId || order._id); fetchAll(); }}
                     />
                   </div>
                 ))
               )}
-            </div>
-          </div>
+           </div>
 
         </div>
+
       </div>
     </div>
   );
@@ -389,19 +360,37 @@ export default function DriverDashboardPage({ driverId }) {
 
 function Loading() {
   return (
-    <div style={{ display:'flex', justifyContent:'center', alignItems:'center',
-                  height:'100vh', background:'#f0fdf4', flexDirection:'column', gap:16,
-                  fontFamily:"'Nunito',sans-serif" }}>
-      <style>{'@keyframes spin { to { transform: rotate(360deg); } }'}</style>
-      <div style={{ position:'relative', width:56, height:56 }}>
-        <div style={{ width:56, height:56, border:'4px solid #d1fae5',
-                      borderTop:'4px solid #047857', borderRadius:'50%',
-                      animation:'spin 0.8s linear infinite' }} />
-        <span style={{ position:'absolute', top:'50%', left:'50%',
-                       transform:'translate(-50%,-50%)', fontSize:20 }}>🌿</span>
-      </div>
-      <p style={{ color:'#047857', fontWeight:800, fontSize:15 }}>Loading dashboard…</p>
+    <div className="h-screen bg-[#0d1f12] flex flex-col items-center justify-center gap-6">
+       <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+       <p className="text-emerald-500 font-black uppercase tracking-[0.3em] text-xs">Calibrating Ops...</p>
     </div>
   );
 }
 
+function NoDriver({ navigate }) {
+  return (
+    <div className="h-screen bg-[#f1f5f9] flex flex-col items-center justify-center p-12 text-center">
+       <div className="w-24 h-24 bg-white rounded-[2.5rem] flex items-center justify-center mb-8 shadow-2xl shadow-slate-200">
+          <Shield size={48} className="text-emerald-500" />
+       </div>
+       <h2 className="text-3xl font-black text-slate-800 italic uppercase tracking-tighter mb-4">No Driver ID Found</h2>
+       <p className="text-slate-500 font-medium max-w-sm mx-auto mb-12">Please ensure you are registered as a driver and logged in with the correct account.</p>
+       <button onClick={() => navigate('/driver/register')} className="bg-[#0d1f12] text-white font-black px-12 py-5 rounded-[2rem] uppercase tracking-widest text-xs shadow-2xl shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all">
+          Register Deployment →
+       </button>
+    </div>
+  );
+}
+
+function Badge({ type, label, className }) {
+   const styles = {
+      info: 'bg-blue-50 text-blue-600',
+      active: 'bg-emerald-50 text-emerald-600',
+      inactive: 'bg-slate-50 text-slate-600'
+   };
+   return (
+      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${styles[type] || styles.inactive} ${className}`}>
+         {label}
+      </span>
+   );
+}

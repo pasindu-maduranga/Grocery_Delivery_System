@@ -97,14 +97,21 @@ function Deploy-App {
     $image = "$ACR/${Name}:latest"
     $exists = az containerapp show --name $Name --resource-group $RG 2>$null
     if ($exists) {
-        az containerapp update `
-          --name $Name `
-          --resource-group $RG `
-          --image $image `
-          --registry-server $ACR `
-          --registry-username $ACR_USER `
-          --registry-password $ACR_PASS | Out-Null
+        # App exists - just update image and env vars
+        if ($EnvVars.Count -gt 0) {
+            az containerapp update `
+              --name $Name `
+              --resource-group $RG `
+              --image $image `
+              --set-env-vars $EnvVars | Out-Null
+        } else {
+            az containerapp update `
+              --name $Name `
+              --resource-group $RG `
+              --image $image | Out-Null
+        }
     } else {
+        # App doesn't exist - create it with all settings
         az containerapp create `
           --name $Name `
           --resource-group $RG `
@@ -115,7 +122,7 @@ function Deploy-App {
           --registry-password $ACR_PASS `
           --target-port $Port `
           --ingress external `
-          --min-replicas 0 `
+          --min-replicas 1 `
           --max-replicas 2 `
           --env-vars $EnvVars | Out-Null
     }

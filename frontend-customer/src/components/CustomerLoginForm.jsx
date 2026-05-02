@@ -34,12 +34,11 @@ const CustomerLoginForm = () => {
           setLocationLoading(false);
         },
         (error) => {
-          console.log("Location error:", error);
-          toast.warning("Unable to access location. Proceeding without it.");
+          console.warn("Location access skipped during login:", error.message);
           resolve(null);
           setLocationLoading(false);
         },
-        { timeout: 10000 }
+        { timeout: 5000 }
       );
     });
   };
@@ -69,7 +68,7 @@ const CustomerLoginForm = () => {
       }
 
       const res = await axios.post(
-        `${import.meta.env.VITE_API_URL}/auth/login`,
+        `${import.meta.env.VITE_API_URL_USER_MANAGEMENT_SERVICE}/auth/login`,
         loginPayload
       );
 
@@ -87,7 +86,7 @@ const CustomerLoginForm = () => {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
+    window.location.href = `${import.meta.env.VITE_API_URL_USER_MANAGEMENT_SERVICE}/auth/google`;
   };
 
   const inputClass =

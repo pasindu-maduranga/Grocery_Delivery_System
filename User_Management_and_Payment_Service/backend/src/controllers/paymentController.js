@@ -9,48 +9,70 @@ const GROCERY_SERVICE_URL = process.env.GROCERY_SERVICE_URL || process.env['groc
 const ORDER_SERVICE_URL = process.env.ORDER_SERVICE_URL || process.env['order-service-url'] || 'http://localhost:5004/api';
 const FRONTEND_URL = process.env.FRONTEND_URL || process.env['frontend-url'] || 'http://localhost:5174';
 
-const paymentStripe = async (req, res) => {
+const syncOrderToService = async (order, user, paymentMethod) => {
   try {
-    const userCart = await Cart.findOne({ userId: req.user._id });
-    if (!userCart || userCart.items.length === 0) {
-      return res
-        .status(400)
-        .json({ success: false, error: "Your cart is empty" });
-    }
+    const customerName = user?.name || user?.fullName || user?.username || "Guest Customer";
+    const customerEmail = user?.email || "";
+    const customerPhone = user?.phoneNo || user?.phoneNumber || "";
 
-    const currency = "lkr";
-
-    // Build Stripe line_items from DB cart items
-    const lineItems = userCart.items.map((item) => ({
-      price_data: {
-        currency,
-        product_data: {
-          name: item.name,
-          images:
-            item.image && item.image.startsWith("http") ? [item.image] : [],
+    await axios.post(
+      `${ORDER_SERVICE_URL}/orders`,
+      {
+        orderId: order._id.toString(),
+        customerId: user._id.toString(),
+        customerName: customerName,
+        customerEmail: customerEmail,
+        customerPhone: customerPhone,
+        items: order.items.map((i) => ({
+          productId: i.productId,
+          name: i.name,
+          qty: i.qty,
+          price: i.price,
+          image: i.image,
+        })),
+        totalAmount: order.totalAmount,
+        shippingCost: order.deliveryFee || 0,
+        paymentStatus: paymentMethod === 'cod' ? 'unpaid' : 'paid',
+        paymentMethod: paymentMethod,
+        shippingAddress: { 
+          street: order.address || user?.address || "",
+          latitude: user?.location?.latitude,
+          longitude: user?.location?.longitude
         },
-        unit_amount: Math.round(item.price * 100),
       },
-      quantity: item.qty,
-    }));
+    );
+    console.log("Order synced to Order Service:", order._id);
+  } catch (err) {
+    console.error("Inter-service order sync failed:", err.message);
+  }
+};
 
-    // Add delivery fee if applicable
-    if (userCart.deliveryFee > 0) {
-      lineItems.push({
-        price_data: {
-          currency,
-          product_data: { name: "Delivery Fee" },
-          unit_amount: Math.round(userCart.deliveryFee * 100),
-        },
-        quantity: 1,
-      });
+const deductStock = async (items) => {
+  try {
+    await axios.post(
+      `${GROCERY_SERVICE_URL}/storefront/deduct`,
+      {
+        items: items.map((i) => ({ id: i.productId, qty: i.qty })),
+      },
+    );
+    console.log("Stock deduction triggered");
+  } catch (err) {
+    console.error("Inter-service stock deduction failed:", err.message);
+  }
+};
+
+const processCheckout = async (req, res) => {
+  try {
+    const { paymentMethod, address, phoneNo } = req.body;
+    const userCart = await Cart.findOne({ userId: req.user._id });
+
+    if (!userCart || userCart.items.length === 0) {
+      return res.status(400).json({ success: false, error: "Your cart is empty" });
     }
 
-    // Create a pending order in DB first
-    const itemsSubtotal = userCart.items.reduce(
-      (sum, i) => sum + i.price * i.qty,
-      0,
-    );
+    const itemsSubtotal = userCart.items.reduce((sum, i) => sum + i.price * i.qty, 0);
+    
+    // Create draft order
     const orderData = {
       userId: req.user._id,
       items: userCart.items.map((i) => ({
@@ -66,35 +88,78 @@ const paymentStripe = async (req, res) => {
       discount: userCart.discount,
       deliveryFee: userCart.deliveryFee,
       totalAmount: userCart.total,
-      status: "placed", // or 'pending_payment'
-      paymentStatus: "pending",
+      status: "placed",
+      paymentStatus: paymentMethod === 'cod' ? 'unpaid' : 'pending',
+      paymentMethod: paymentMethod,
+      address: address || req.user.address,
+      phoneNo: phoneNo || req.user.phoneNo,
     };
 
     const newOrder = new Order(orderData);
     const savedOrder = await newOrder.save();
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      line_items: lineItems,
-      mode: "payment",
-      metadata: {
-        orderId: savedOrder._id.toString(),
-        userId: req.user._id.toString(),
-      },
-      success_url: `${FRONTEND_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${FRONTEND_URL}/payment/cancel`,
-    });
+    if (paymentMethod === 'cod') {
+      // Direct success for COD
+      await deductStock(savedOrder.items);
+      await syncOrderToService(savedOrder, req.user, 'cod');
+      
+      // Clear Cart
+      await Cart.findOneAndUpdate(
+        { userId: req.user._id },
+        { $set: { items: [], discount: 0, couponCode: null } }
+      );
 
-    res.json({
-      success: true,
-      url: session.url,
-    });
+      return res.json({
+        success: true,
+        message: "Order placed successfully (COD)",
+        orderId: savedOrder._id
+      });
+    } else {
+      // Stripe flow
+      const currency = "lkr";
+      const lineItems = userCart.items.map((item) => ({
+        price_data: {
+          currency,
+          product_data: {
+            name: item.name,
+            images: item.image && item.image.startsWith("http") ? [item.image] : [],
+          },
+          unit_amount: Math.round(item.price * 100),
+        },
+        quantity: item.qty,
+      }));
+
+      if (userCart.deliveryFee > 0) {
+        lineItems.push({
+          price_data: {
+            currency,
+            product_data: { name: "Delivery Fee" },
+            unit_amount: Math.round(userCart.deliveryFee * 100),
+          },
+          quantity: 1,
+        });
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: lineItems,
+        mode: "payment",
+        metadata: {
+          orderId: savedOrder._id.toString(),
+          userId: req.user._id.toString(),
+        },
+        success_url: `${FRONTEND_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${FRONTEND_URL}/payment/cancel`,
+      });
+
+      return res.json({
+        success: true,
+        url: session.url,
+      });
+    }
   } catch (error) {
-    console.error("Stripe session creation failed:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
+    console.error("Checkout processing failed:", error);
+    res.status(500).json({ success: false, error: error.message });
   }
 };
 
@@ -109,70 +174,23 @@ const verifyCheckout = async (req, res) => {
       const { orderId, userId } = session.metadata;
 
       const order = await Order.findById(orderId);
-      if (!order)
-        return res
-          .status(404)
-          .json({ success: false, message: "Order not found" });
+      if (!order) return res.status(404).json({ success: false, message: "Order not found" });
 
-      // Only process if not already paid
       if (order.paymentStatus !== "paid") {
-        // Step 1: Deduct stock in Grocery Service
-        try {
-          await axios.post(
-            `${GROCERY_SERVICE_URL}/storefront/deduct`,
-            {
-              items: order.items.map((i) => ({ id: i.productId, qty: i.qty })),
-            },
-          );
-          console.log("Stock deduction triggered for order:", orderId);
-        } catch (err) {
-          console.error("Inter-service stock deduction failed:", err.message);
-        }
-
-        // Step 2: Update Order Status
+        const user = await User.findById(userId);
+        
+        await deductStock(order.items);
+        
         order.paymentStatus = "paid";
         order.paymentId = session.id;
         await order.save();
 
-        // Step 3: Clear User Cart
         await Cart.findOneAndUpdate(
           { userId: userId },
-          { $set: { items: [], discount: 0, couponCode: null } },
+          { $set: { items: [], discount: 0, couponCode: null } }
         );
 
-        // Step 4: Sync Order to Order & Notification Service
-        try {
-          const user = await User.findById(userId);
-
-          await axios.post(
-            `${ORDER_SERVICE_URL}/orders`,
-            {
-              orderId: order._id.toString(),
-              customerId: userId,
-              customerName: user ? user.name : "Unknown Customer",
-              customerEmail: user ? user.email : "",
-              customerPhone: user ? user.phoneNo : "",
-              items: order.items.map((i) => ({
-                productId: i.productId,
-                name: i.name,
-                qty: i.qty,
-                price: i.price,
-                image: i.image,
-              })),
-              totalAmount: order.totalAmount,
-              shippingCost: order.deliveryFee || 0,
-              paymentStatus: "paid",
-              paymentMethod: "card",
-              shippingAddress: { street: user?.address || "" },
-            },
-          );
-          console.log(
-            "Order synced to Order & Notification Service:",
-            order._id,
-          );
-        } catch (err) {
-          console.error("Inter-service order sync failed:", err.message);
-        }
+        await syncOrderToService(order, user, 'card');
       }
 
       res.json({
@@ -180,19 +198,15 @@ const verifyCheckout = async (req, res) => {
         message: "Payment verified, order updated and cart cleared.",
       });
     } else {
-      res
-        .status(400)
-        .json({ success: false, message: "Payment not completed." });
+      res.status(400).json({ success: false, message: "Payment not completed." });
     }
   } catch (error) {
     console.error("Verify checkout error:", error);
-    res
-      .status(500)
-      .json({ success: false, error: "Payment verification failed" });
+    res.status(500).json({ success: false, error: "Payment verification failed" });
   }
 };
 
 module.exports = { 
-  paymentStripe, 
+  processCheckout, 
   verifyCheckout 
 };
