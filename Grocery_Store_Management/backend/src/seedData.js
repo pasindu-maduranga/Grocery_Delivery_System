@@ -480,12 +480,28 @@ const screens = [
     order: 3,
   },
   {
+    name: 'Add Driver',
+    code: 'SCREEN_ADD_DRIVER',
+    menuCode: 'DELIVERY_FLEET',
+    route: '/admin/add-driver',
+    description: 'Admin: Register a new delivery partner',
+    order: 4,
+  },
+  {
+    name: 'Revenue & Commission',
+    code: 'SCREEN_COMMISSION_REVENUE',
+    menuCode: 'DELIVERY_FLEET',
+    route: '/admin/commission-revenue',
+    description: 'Admin: Track delivery revenue and process payouts',
+    order: 5,
+  },
+  {
     name: 'My Orders',
     code: 'SCREEN_DRIVER_MY_ORDERS',
     menuCode: 'DELIVERY_FLEET',
     route: '/driver/orders',
     description: 'Driver: View and manage assigned delivery tasks',
-    order: 4,
+    order: 6,
   },
 ];
 

@@ -243,13 +243,18 @@ export default function DriverDashboardPage({ driverId: propDriverId }) {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                 <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                    <div className="text-[10px] font-black text-white/20 uppercase mb-1">Rating</div>
-                    <div className="text-white font-black text-lg">{driver?.rating?.average?.toFixed(1) || '—'} <span className="text-emerald-400">★</span></div>
+                 <div className="p-4 bg-white/5 rounded-2xl border border-white/5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-400/20 rounded-full blur-xl -mr-8 -mt-8" />
+                    <div className="text-[10px] font-black text-white/30 uppercase mb-1 flex items-center gap-1"><Zap size={10} className="text-emerald-400" /> Pending Payout</div>
+                    <div className="text-white font-black text-xl leading-none mt-2 flex items-baseline gap-1">
+                       <span className="text-[10px] text-emerald-400/50">LKR</span> {(driver?.walletBalance || 0).toFixed(2)}
+                    </div>
                  </div>
                  <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                    <div className="text-[10px] font-black text-white/20 uppercase mb-1">XP Points</div>
-                    <div className="text-white font-black text-lg">{(driver?.completedOrders?.length || 0) * 10}</div>
+                    <div className="text-[10px] font-black text-white/30 uppercase mb-1">Total Earned</div>
+                    <div className="text-white font-black text-lg flex items-baseline gap-1">
+                       <span className="text-[10px] text-white/50">LKR</span> {(driver?.totalEarned || 0).toFixed(2)}
+                    </div>
                  </div>
               </div>
            </div>

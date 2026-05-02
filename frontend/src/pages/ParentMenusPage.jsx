@@ -4,11 +4,13 @@ import { Modal, ConfirmModal, Table, Badge, FormField, PageLoader, Spinner } fro
 import IconPicker, { getIcon } from '../components/common/IconPicker.jsx'
 import { Plus, Pencil, Power } from 'lucide-react'
 import Layout from '../components/layout/Layout.jsx'
+import { useAuth } from '../context/AuthContext'
 import React from 'react'
 
 const EMPTY = { name: '', code: '', icon: 'settings', order: 1, isSuperAdminOnly: false }
 
 export default function ParentMenusPage() {
+  const { refreshSidebar } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState({ open: false, mode: 'create', item: null })
@@ -38,13 +40,14 @@ export default function ParentMenusPage() {
         ? await modulesAPI.createParentMenu(form)
         : await modulesAPI.updateParentMenu(modal.item._id, form)
       setModal({ open: false }); load()
+      refreshSidebar()
     } catch (err) { setError(err.response?.data?.message || 'Something went wrong') }
     finally { setSaving(false) }
   }
 
   const handleToggle = async () => {
     setSaving(true)
-    try { await modulesAPI.toggleParentMenu(confirm.item._id); setConfirm({ open: false }); load() }
+    try { await modulesAPI.toggleParentMenu(confirm.item._id); setConfirm({ open: false }); load(); refreshSidebar() }
     finally { setSaving(false) }
   }
 

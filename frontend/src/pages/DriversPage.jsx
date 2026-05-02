@@ -1,292 +1,296 @@
 import { useState, useEffect } from 'react'
-import { driverApi } from '../api/deliveryApi'
-import axios from 'axios'
-import { usersAPI, rolesAPI } from '../api/index'
+import { useNavigate } from 'react-router-dom'
+import { driversAPI } from '../api/index'
 import Layout from '../components/layout/Layout'
 import { Table, Badge, ConfirmModal, PageLoader, Spinner, Modal, FormField } from '../components/common/index'
-import { Truck, MapPin, User, Settings, AlertCircle, Plus, Eye, CheckCircle, XCircle, Search, Mail, Phone, ShoppingBag, Shield, Zap, RefreshCw } from 'lucide-react'
-import { toast } from 'sonner'
+import { Plus, Pencil, Power, Lock, CheckCircle, XCircle, Truck, MapPin, Phone } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 import React from 'react'
 
-const SYSTEM_API = import.meta.env.VITE_SYSTEM_SERVICE_URL || 'http://localhost:5000/api'
+const STATUS_BADGE = {
+  pending:    { type: 'inactive', label: 'Pending' },
+  approved:   { type: 'active',   label: 'Approved' },
+  rejected:   { type: 'locked',   label: 'Rejected' },
+  // Legacy values from old schema
+  Active:     { type: 'active',   label: 'Approved' },
+  Suspended:  { type: 'locked',   label: 'Suspended' },
+  Pending:    { type: 'inactive', label: 'Pending' },
+}
 
 export default function DriversPage() {
-  const [loading, setLoading] = useState(true)
-  const [drivers, setDrivers] = useState([])
-  const [search, setSearch] = useState('')
-  const [syncing, setSyncing] = useState(false)
-  
-  // Add rider modal state
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [roles, setRoles] = useState([])
-  const [form, setForm] = useState({ 
-    firstName: '', 
-    lastName: '', 
-    email: '', 
-    username: '', 
-    roleId: '',
-    vehicleType: 'Motorcycle' 
-  })
+  const navigate = useNavigate()
+  const { isSuperAdmin, hasPermission } = useAuth()
 
-  useEffect(() => {
-    fetchDrivers()
-    fetchRoles()
-  }, [])
+  const [drivers,       setDrivers]       = useState([])
+  const [roles,         setRoles]         = useState([])
+  const [loading,       setLoading]       = useState(true)
+  const [filterStatus,  setFilterStatus]  = useState('')
+  const [confirm,       setConfirm]       = useState({ open: false, type: '', item: null })
+  const [approveModal,  setApproveModal]  = useState({ open: false, driver: null })
+  const [rejectModal,   setRejectModal]   = useState({ open: false, driver: null })
+  const [approveForm,   setApproveForm]   = useState({ username: '', roleId: '', approvalNote: '' })
+  const [rejectNote,    setRejectNote]    = useState('')
+  const [saving,        setSaving]        = useState(false)
+  const [actionError,   setActionError]   = useState('')
 
-  const fetchDrivers = async () => {
+  useEffect(() => { load() }, [filterStatus])
+
+  const load = async () => {
+    setLoading(true)
     try {
-      const res = await driverApi.getAll()
-      setDrivers(res.data || [])
+      const [d, r] = await Promise.all([
+        driversAPI.getAll(filterStatus ? { status: filterStatus } : {}),
+        driversAPI.getRoles(),
+      ])
+      setDrivers(d.data.data)
+      setRoles(r.data.data.filter(r => r.isActive))
     } catch (err) {
-      toast.error('Failed to load riders')
-    } finally {
-      setLoading(false)
-    }
+      console.error('Load drivers error:', err.response?.status, err.response?.data)
+      setDrivers([])
+    } finally { setLoading(false) }
   }
 
-  const fetchRoles = async () => {
-     try {
-        const res = await rolesAPI.getAll()
-        const rolesList = res.data.data || res.data // handle both axios and direct formats
-        setRoles(rolesList.filter(r => r.name.toLowerCase().includes('driver') || r.name.toLowerCase().includes('delivery')))
-     } catch (err) {
-        toast.error('Failed to load rider roles')
-     }
+  const openApprove = (driver) => {
+    setApproveForm({
+      username: driver.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, ''),
+      roleId: '',
+      approvalNote: '',
+    })
+    setActionError('')
+    setApproveModal({ open: true, driver })
   }
 
-  const handleSync = async () => {
-    setSyncing(true)
+  const handleApprove = async (e) => {
+    e.preventDefault(); setSaving(true); setActionError('')
     try {
-      const token = localStorage.getItem('token')
-      await axios.post(`${SYSTEM_API}/system-users/sync-drivers`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      toast.success('Rider fleet sync complete!')
-      fetchDrivers()
-    } catch (err) {
-      toast.error('Sync failed: ' + (err.response?.data?.message || err.message))
-    } finally {
-      setSyncing(false)
-    }
+      await driversAPI.approve(approveModal.driver._id, approveForm)
+      setApproveModal({ open: false }); load()
+    } catch (err) { setActionError(err.response?.data?.message || 'Failed') }
+    finally { setSaving(false) }
   }
 
-  const handleAddRider = async (e) => {
-    e.preventDefault()
-    setSubmitting(true)
+  const openReject = (driver) => {
+    setRejectNote(''); setActionError(''); setRejectModal({ open: true, driver })
+  }
+
+  const handleReject = async (e) => {
+    e.preventDefault(); setSaving(true); setActionError('')
     try {
-      // Create user first
-      await usersAPI.create(form)
-      toast.success('Rider created and credentials emailed!')
-      setShowAddModal(false)
-      fetchDrivers()
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create rider')
-    } finally {
-      setSubmitting(false)
-    }
+      await driversAPI.reject(rejectModal.driver._id, { approvalNote: rejectNote })
+      setRejectModal({ open: false }); load()
+    } catch (err) { setActionError(err.response?.data?.message || 'Failed') }
+    finally { setSaving(false) }
   }
 
-  const filtered = drivers.filter(d => 
-    d.name?.toLowerCase().includes(search.toLowerCase()) || 
-    d.email?.toLowerCase().includes(search.toLowerCase())
-  )
+  const handleToggle = async () => {
+    setSaving(true)
+    try {
+      if (confirm.type === 'active') await driversAPI.toggleActive(confirm.item._id)
+      else await driversAPI.toggleLock(confirm.item._id)
+      setConfirm({ open: false }); load()
+    } finally { setSaving(false) }
+  }
 
-  if (loading) return <Layout title="Rider Management"><PageLoader /></Layout>
+  if (loading) return <Layout title="Delivery Partners"><PageLoader /></Layout>
 
   return (
-    <Layout 
-      title="Fleet Control HUB" 
-      subtitle={`${drivers.length} registered riders in the system`}
-    >
-      <div className="space-y-6">
-        <div className="bg-red-650 text-white p-4 rounded-xl font-bold text-center">LOGISTICS HUB ACTIVE V2</div>
-        
-        {/* Header Actions */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-50">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text"
-              placeholder="Search by name, email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 font-medium"
-            />
+    <Layout title="Delivery Partners" subtitle="Driver Management">
+      <div className="card">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h3 className="font-semibold text-slate-800">All Delivery Partners</h3>
+            <p className="text-xs text-slate-400 mt-0.5">{drivers.length} total drivers</p>
           </div>
-
           <div className="flex items-center gap-3">
-             <button 
-               onClick={handleSync}
-               disabled={syncing}
-               className="flex items-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-all disabled:opacity-50"
-             >
-                {syncing ? <RefreshCw size={18} className="animate-spin" /> : <Zap size={18} />}
-                {syncing ? 'Syncing...' : 'Sync with Fleet'}
-             </button>
-             <button 
-               onClick={() => setShowAddModal(true)}
-               className="flex items-center gap-2 bg-[#065f46] hover:bg-[#064e3b] text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-emerald-900/20 transition-all"
-             >
-               <Plus size={18} /> Add Rider
-             </button>
+            <select className="input w-40 text-sm" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+              <option value="">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            {(isSuperAdmin || hasPermission('SCREEN_ALL_DRIVERS', 'canCreate')) && (
+              <button onClick={() => navigate('/admin/add-driver')} className="btn-primary">
+                <Plus size={16} /> Add Driver
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Riders Table */}
-        <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/40 border border-slate-50 overflow-hidden">
-          <Table 
-            columns={[
-              { 
-                header: 'Rider Info', 
-                render: (d) => (
-                  <div className="flex items-center gap-4 py-2">
-                    <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center font-black text-lg">
-                      {d.name?.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="text-sm font-black text-slate-800 uppercase tracking-tighter">{d.name}</div>
-                      <div className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
-                        <Mail size={10} /> {d.email}
+        <Table
+          headers={['Driver', 'Contact', 'Location', 'Vehicle', 'Status', 'Portal Access', 'Actions']}
+          empty={drivers.length === 0}
+        >
+          {drivers.map(d => (
+            <tr key={d._id} className="hover:bg-slate-50 transition-colors">
+
+              {/* Driver */}
+              <td className="table-cell">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <Truck size={18} className="text-emerald-600" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-800 text-sm">{d.name}</div>
+                    <div className="text-xs text-slate-400">{d.nic}</div>
+                  </div>
+                </div>
+              </td>
+
+              {/* Contact */}
+              <td className="table-cell">
+                <div className="flex items-center gap-1.5 text-sm text-slate-700">
+                  <Phone size={12} className="text-slate-400" />
+                  {d.phone}
+                </div>
+                <div className="text-xs text-slate-400 mt-0.5">{d.email}</div>
+              </td>
+
+              {/* Location */}
+              <td className="table-cell">
+                <div className="flex items-center gap-1.5">
+                  <MapPin size={12} className="text-slate-400 flex-shrink-0" />
+                  <div>
+                    <div className="text-xs font-medium text-slate-700">{d.location?.district}</div>
+                    <div className="text-xs text-slate-400">{d.location?.province}</div>
+                  </div>
+                </div>
+              </td>
+
+              {/* Vehicle */}
+              <td className="table-cell">
+                <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded-full font-medium">
+                  {d.vehicle?.type || '—'}
+                </span>
+                {d.vehicle?.licensePlate && (
+                  <div className="text-xs text-slate-400 mt-0.5">{d.vehicle.licensePlate}</div>
+                )}
+              </td>
+
+              {/* Status */}
+              <td className="table-cell"><Badge {...(STATUS_BADGE[d.accountStatus] || { type: 'inactive', label: d.accountStatus })} /></td>
+
+              {/* Portal Access */}
+              <td className="table-cell">
+                {(d.accountStatus === 'approved' || d.accountStatus === 'Active')
+                  ? <div>
+                      <div className="text-xs font-mono text-slate-700">{d.username}</div>
+                      <div className="flex gap-1 mt-1">
+                        <Badge type={d.isActive !== false ? 'active' : 'inactive'} label={d.isActive !== false ? 'Active' : 'Inactive'} />
+                        {d.isLocked && <Badge type="locked" label="Locked" />}
                       </div>
                     </div>
-                  </div>
-                )
-              },
-              { 
-                header: 'Vehicle', 
-                render: (d) => (
-                  <div className="flex items-center gap-3">
-                     <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center border border-slate-100">
-                        <Truck size={18} />
-                     </div>
-                     <div>
-                        <div className="text-[11px] font-black text-slate-800 uppercase">{d.vehicleType}</div>
-                        <div className="text-[10px] text-slate-400 font-mono italic">{d.licensePlate || '1234'}</div>
-                     </div>
-                  </div>
-                )
-              },
-              { 
-                header: 'Status', 
-                render: (d) => (
-                  <Badge 
-                    type={d.isActive ? 'active' : 'locked'} 
-                    label={d.isActive ? 'Approved' : 'Suspended'} 
-                    className="px-6 py-1.5"
-                  />
-                )
-              },
-              { 
-                header: 'Availability', 
-                render: (d) => (
-                  <div className="flex items-center gap-2">
-                     <div className={`w-2 h-2 rounded-full ${d.isAvailable ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-slate-300'}`} />
-                     <span className={`text-[11px] font-black uppercase tracking-widest ${d.isAvailable ? 'text-emerald-600' : 'text-slate-400'}`}>
-                        {d.isAvailable ? 'Online' : 'Offline'}
-                     </span>
-                  </div>
-                )
-              },
-              {
-                header: 'Ratings',
-                render: (d) => (
-                  <div className="flex flex-col">
-                     <div className="flex items-center gap-1 group">
-                        {[1,2,3,4,5].map(n => (
-                          <span key={n} className={`text-sm ${n <= Math.round(d.rating?.average || 0) ? 'text-amber-400' : 'text-slate-100'}`}>★</span>
-                        ))}
-                        <span className="text-xs font-black text-slate-800 ml-1 italic">{d.rating?.average?.toFixed(1) || '0.0'}</span>
-                     </div>
-                  </div>
-                )
-              },
-              { 
-                header: 'Actions', 
-                render: (d) => (
-                  <div className="flex items-center gap-2">
-                    <button className="p-2.5 bg-slate-50 text-slate-400 hover:text-red-500 rounded-xl transition-all border border-slate-100">
-                      <XCircle size={18} />
-                    </button>
-                    <button className="p-2.5 bg-slate-50 text-slate-400 hover:text-emerald-600 rounded-xl transition-all border border-slate-100" title="View Location">
-                      <MapPin size={18} />
-                    </button>
-                  </div>
-                )
-              }
-            ]} 
-            data={filtered} 
-          />
-        </div>
+                  : <span className="text-xs text-slate-400">—</span>
+                }
+              </td>
 
-        {/* Add Rider Modal */}
-        <Modal 
-          isOpen={showAddModal} 
-          onClose={() => setShowAddModal(false)}
-          title="Onboard New Fleet Pilot"
-        >
-          <form onSubmit={handleAddRider} className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField 
-                label="First Name" 
-                value={form.firstName} 
-                onChange={(v) => setForm({ ...form, firstName: v })} 
-                required 
-              />
-              <FormField 
-                label="Last Name" 
-                value={form.lastName} 
-                onChange={(v) => setForm({ ...form, lastName: v })} 
-                required 
-              />
-            </div>
-            <FormField 
-              label="Email Address" 
-              type="email"
-              value={form.email} 
-              onChange={(v) => setForm({ ...form, email: v })} 
-              required 
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField 
-                label="Username" 
-                value={form.username} 
-                onChange={(v) => setForm({ ...form, username: v })} 
-                required 
-              />
-              <div className="space-y-1">
-                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Target Role</label>
-                 <select 
-                    value={form.roleId} 
-                    onChange={(e) => setForm({ ...form, roleId: e.target.value })}
-                    required
-                    className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 font-medium"
-                 >
-                    <option value="">Select Role</option>
-                    {roles.map(r => <option key={r._id} value={r._id}>{r.name}</option>)}
-                 </select>
-              </div>
-            </div>
-            
-            <div className="pt-4 flex gap-3">
-              <button 
-                type="button" 
-                onClick={() => setShowAddModal(false)}
-                className="flex-1 py-4 bg-slate-50 text-slate-400 rounded-[1.5rem] font-black text-xs uppercase tracking-widest"
-              >
-                Cancel
-              </button>
-              <button 
-                type="submit" 
-                disabled={submitting}
-                className="flex-[2] py-4 bg-[#0d1f12] text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-950/20 disabled:opacity-50"
-              >
-                {submitting ? 'Calibrating...' : 'Register Deployment'}
-              </button>
-            </div>
-          </form>
-        </Modal>
+              {/* Actions */}
+              <td className="table-cell">
+                <div className="flex items-center gap-1">
+                  {(d.accountStatus === 'pending' || d.accountStatus === 'Pending') && <>
+                    <button onClick={() => openApprove(d)} title="Approve"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-emerald-50 text-emerald-600">
+                      <CheckCircle size={14} />
+                    </button>
+                    <button onClick={() => openReject(d)} title="Reject"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-red-400">
+                      <XCircle size={14} />
+                    </button>
+                  </>}
+                  {(d.accountStatus === 'approved' || d.accountStatus === 'Active') && <>
+                    <button onClick={() => setConfirm({ open: true, type: 'active', item: d })}
+                      title={d.isActive !== false ? 'Deactivate' : 'Activate'}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg ${d.isActive !== false ? 'hover:bg-red-50 text-red-400' : 'hover:bg-emerald-50 text-emerald-500'}`}>
+                      <Power size={14} />
+                    </button>
+                    <button onClick={() => setConfirm({ open: true, type: 'lock', item: d })}
+                      title={d.isLocked ? 'Unlock' : 'Lock'}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg ${d.isLocked ? 'hover:bg-emerald-50 text-emerald-500' : 'hover:bg-amber-50 text-amber-500'}`}>
+                      <Lock size={14} />
+                    </button>
+                  </>}
+                </div>
+              </td>
+
+            </tr>
+          ))}
+        </Table>
       </div>
+
+      {/* Approve Modal */}
+      <Modal open={approveModal.open} onClose={() => setApproveModal({ open: false })}
+        title="Approve Driver & Set Portal Access" size="md">
+        <form onSubmit={handleApprove} className="p-6 space-y-4">
+          {actionError && <p className="text-sm text-red-500 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{actionError}</p>}
+          <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+              <Truck size={20} className="text-emerald-600" />
+            </div>
+            <div>
+              <div className="font-semibold text-sm text-slate-800">{approveModal.driver?.name}</div>
+              <div className="text-xs text-slate-500">{approveModal.driver?.email}</div>
+            </div>
+          </div>
+          <FormField label="Portal Username">
+            <input className="input font-mono" value={approveForm.username}
+              onChange={e => setApproveForm(p => ({ ...p, username: e.target.value.toLowerCase().replace(/\s/g, '') }))}
+              required placeholder="e.g. john_driver" />
+          </FormField>
+          <FormField label="Assign Role">
+            <select className="input" value={approveForm.roleId}
+              onChange={e => setApproveForm(p => ({ ...p, roleId: e.target.value }))} required>
+              <option value="">— Select Role —</option>
+              {roles.map(r => <option key={r._id} value={r._id}>{r.name}</option>)}
+            </select>
+          </FormField>
+          <FormField label="Approval Note (optional)">
+            <textarea className="input h-20 resize-none" value={approveForm.approvalNote}
+              onChange={e => setApproveForm(p => ({ ...p, approvalNote: e.target.value }))}
+              placeholder="Welcome message or internal notes..." />
+          </FormField>
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-3 py-2 rounded-lg">
+            A random password will be auto-generated and sent to the driver's email along with username and role.
+          </div>
+          <div className="flex gap-3 justify-end pt-2 border-t border-slate-100">
+            <button type="button" onClick={() => setApproveModal({ open: false })} className="btn-secondary">Cancel</button>
+            <button type="submit" disabled={saving} className="btn-primary">
+              {saving && <Spinner size="sm" />} Approve & Send Credentials
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Reject Modal */}
+      <Modal open={rejectModal.open} onClose={() => setRejectModal({ open: false })}
+        title="Reject Driver Application" size="sm">
+        <form onSubmit={handleReject} className="p-6 space-y-4">
+          {actionError && <p className="text-sm text-red-500 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{actionError}</p>}
+          <p className="text-sm text-slate-600">
+            Rejecting <strong>{rejectModal.driver?.name}</strong>. An email will be sent to notify them.
+          </p>
+          <FormField label="Reason (optional)">
+            <textarea className="input h-24 resize-none" value={rejectNote}
+              onChange={e => setRejectNote(e.target.value)} placeholder="Explain the reason for rejection..." />
+          </FormField>
+          <div className="flex gap-3 justify-end pt-2 border-t border-slate-100">
+            <button type="button" onClick={() => setRejectModal({ open: false })} className="btn-secondary">Cancel</button>
+            <button type="submit" disabled={saving} className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2">
+              {saving && <Spinner size="sm" />} Reject & Notify
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Toggle Confirm */}
+      <ConfirmModal
+        open={confirm.open} onClose={() => setConfirm({ open: false })}
+        onConfirm={handleToggle} loading={saving}
+        title={confirm.type === 'active'
+          ? `${confirm.item?.isActive ? 'Deactivate' : 'Activate'} "${confirm.item?.name}"?`
+          : `${confirm.item?.isLocked ? 'Unlock' : 'Lock'} "${confirm.item?.name}"?`}
+        message={confirm.type === 'active'
+          ? confirm.item?.isActive ? 'Driver portal access will be suspended.' : 'Driver portal access will be restored.'
+          : confirm.item?.isLocked ? 'Driver will be able to log in again.' : 'Driver will be locked out of the portal.'}
+      />
     </Layout>
   )
 }

@@ -38,6 +38,17 @@ const CustomerRegisterForm = () => {
     fetchCurrentLocation();
   }, []);
 
+  const fetchAddressFromCoords = async (lat, lng) => {
+    try {
+      const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+      if (res.data && res.data.display_name) {
+        setFormData(prev => ({ ...prev, address: res.data.display_name }));
+      }
+    } catch (err) {
+      console.warn("Failed to fetch address details", err);
+    }
+  };
+
   const fetchCurrentLocation = () => {
     setFetchingLoc(true);
     if (navigator.geolocation) {
@@ -46,7 +57,7 @@ const CustomerRegisterForm = () => {
           const newLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
           setLocation(newLoc);
           setFetchingLoc(false);
-          // Try to reverse geocode maybe? (Skip for now to keep it simple)
+          fetchAddressFromCoords(newLoc.lat, newLoc.lng);
         },
         (err) => {
           setFetchingLoc(false);
@@ -111,6 +122,7 @@ const CustomerRegisterForm = () => {
     useMapEvents({
       click(e) {
         setLocation(e.latlng);
+        fetchAddressFromCoords(e.latlng.lat, e.latlng.lng);
       },
     });
     return <Marker position={location} />;
@@ -182,7 +194,6 @@ const CustomerRegisterForm = () => {
                 </div>
             </div>
 
-            {/* Delivery Location Section */}
             <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
                <div className="flex items-center justify-between mb-4 px-1">
                   <div className="flex items-center gap-2">

@@ -23,6 +23,8 @@ const Cart = () => {
     setCoupon,
     couponLoading,
     checkoutLoading,
+    isWithinColombo,
+    setIsWithinColombo,
     handleUpdateQty,
     handleRemoveItem,
     handleClearCart,
@@ -88,13 +90,13 @@ const Cart = () => {
             <OrderSummary
               cartCount={cartCount}
               subtotal={subtotal}
-              discount={discount}
               discountAmt={discountAmt}
               deliveryFee={deliveryFee}
               total={total}
-              couponCode={couponCode}
               items={items}
               checkoutLoading={checkoutLoading}
+              isWithinColombo={isWithinColombo}
+              setIsWithinColombo={setIsWithinColombo}
               onCheckout={handleCheckout}
             />
           </div>

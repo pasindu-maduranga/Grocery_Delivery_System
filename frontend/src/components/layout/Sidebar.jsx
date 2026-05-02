@@ -2,36 +2,14 @@ import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
-  ShoppingCart, Settings, Users, FileText, Package, Store,
-  DollarSign, Truck, ChevronDown, ChevronRight, LogOut,
-  LayoutDashboard, Tag, Layers, CreditCard, Box, ClipboardList,
-  TrendingUp, ReceiptText, LayoutGrid
+  ShoppingCart, ChevronDown, ChevronRight, LogOut,
+  LayoutDashboard
 } from 'lucide-react'
+import { getIcon } from '../common/IconPicker.jsx'
 import React from 'react'
 
-const ICONS = {
-  settings: Settings,
-  users: Users,
-  'file-text': FileText,
-  receipt: ReceiptText,
-  package: Package,
-  'shopping-cart': ShoppingCart,
-  'dollar-sign': DollarSign,
-  truck: Truck,
-  layout: LayoutGrid,
-  'user-cog': Users,
-  tag: Tag,
-  clipboard: ClipboardList,
-  'trending-up': TrendingUp,
-  layers: Layers,
-  store: Store,
-  'credit-card': CreditCard,
-  box: Box,
-  default: FileText,
-}
-
 const Icon = ({ name, size = 18 }) => {
-  const C = ICONS[name] || ICONS.default
+  const C = getIcon(name)
   return <C size={size} />
 }
 
@@ -123,7 +101,7 @@ export default function Sidebar() {
               }`
             }
           >
-            <Settings size={18} />
+            <Icon name="settings" size={18} />
           </NavLink>
         )}
 

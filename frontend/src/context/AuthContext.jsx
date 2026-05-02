@@ -81,6 +81,20 @@ export const AuthProvider = ({ children }) => {
     return res.data
   }
 
+  const refreshSidebar = async () => {
+    try {
+      if (userType === 'supplier') {
+        const res = await authAPI.supplierMe()
+        setSidebar(res.data.sidebar || [])
+      } else {
+        const res = await authAPI.me()
+        setSidebar(res.data.sidebar || [])
+      }
+    } catch (err) {
+      console.error('Failed to refresh sidebar:', err)
+    }
+  }
+
   const logout = async () => {
     try { await authAPI.logout() } catch {}
     localStorage.clear()
@@ -102,7 +116,7 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider value={{
       user, userType, sidebar, loading,
-      login, supplierLogin, logout, hasPermission,
+      login, supplierLogin, logout, hasPermission, refreshSidebar,
       isSupplier, isSystemUser, isSuperAdmin, isDriver
     }}>
       {children}

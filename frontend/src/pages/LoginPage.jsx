@@ -19,7 +19,10 @@ export default function LoginPage() {
     try {
       // Try system user login first
       const res = await login(form.username, form.password)
-      if (res.userType === 'supplier') {
+      const roleName = res.user?.role?.name?.toLowerCase() || res.user?.role
+      if (roleName === 'delivery_person' || roleName === 'driver' || roleName?.includes('driver')) {
+        navigate('/driver/dashboard')
+      } else if (res.userType === 'supplier') {
         navigate('/dashboard')
       } else {
         navigate('/dashboard')

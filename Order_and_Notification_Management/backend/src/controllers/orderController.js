@@ -68,6 +68,17 @@ const getAllOrders = async (req, res) => {
   }
 };
 
+// ─── Get customer's orders ────────────────────────────────────────────────────
+const getMyOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({ customerId: req.user.id })
+      .sort({ createdAt: -1 });
+    return res.json({ success: true, data: orders });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // ─── Get single order ─────────────────────────────────────────────────────────
 const getOrderById = async (req, res) => {
   try {
@@ -103,7 +114,8 @@ const updateOrderStatus = async (req, res) => {
     order.status = status;
     order.adminNotes = adminNotes || order.adminNotes;
     if (driverId) {
-      order.assignedDriver = driverId;
+      order.assignedDriverId = driverId;
+      order.assignmentStatus = 'accepted';
     }
     await order.save();
 
@@ -121,7 +133,7 @@ const updateOrderStatus = async (req, res) => {
         'ready': 'prepared',
         'out_for_delivery': 'pickup',
         'delivered': 'delivered',
-        'cancelled': 'cancelled'
+        'cancelled': 'cancelled',
       };
       const userMgmtStatus = statusMap[status] || status;
 
@@ -129,16 +141,12 @@ const updateOrderStatus = async (req, res) => {
       const userMgmtBase = process.env.USER_SERVICE_URL || 'http://localhost:5003/api';
       console.log(`[DEBUG] Target URL: ${userMgmtBase}/admin/orders/status/${order.orderId}`);
 
-      const syncRes = await axios.patch(`${userMgmtBase}/admin/orders/status/${order.orderId}`,
+      await axios.patch(`${userMgmtBase}/admin/orders/status/${order.orderId}`,
         { status: userMgmtStatus },
         { headers: { Authorization: req.headers.authorization } }
       );
-      console.log(`[DEBUG] Sync successful:`, syncRes.data.message);
     } catch (syncErr) {
-      console.error('[DEBUG] Sync failed:', syncErr.response?.data || syncErr.message);
-      if (syncErr.response?.status === 401) {
-        console.error('[DEBUG] Auth failed. Check if JWT_SECRET matches between services.');
-      }
+      console.error('[DEBUG] Sync failed:', syncErr.message);
     }
 
     return res.json({ success: true, data: order });
@@ -212,6 +220,7 @@ const getAvailableDrivers = async (req, res) => {
 module.exports = {
   receiveOrder,
   getAllOrders,
+  getMyOrders,
   getOrderById,
   updateOrderStatus,
   getOrderStats,

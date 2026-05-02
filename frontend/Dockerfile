@@ -17,8 +17,9 @@ ENV VITE_DELIVERY_SERVICE_URL=$VITE_DELIVERY_SERVICE_URL
 
 RUN npm run build
 
-FROM nginx:1.27-alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+FROM node:20-alpine
+RUN npm install -g serve
+COPY --from=build /app/dist /app/dist
+WORKDIR /app
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["serve", "-s", "dist", "-l", "80"]

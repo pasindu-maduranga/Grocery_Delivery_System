@@ -27,7 +27,6 @@ const getCart = async (userId) => {
 
 // ADD ITEM
 // Adds a product to cart. If product already exists → increments qty.
-// productData should come from the Products microservice response.
 const addItem = async (userId, productData) => {
     const { productId, name, price, image, category, unit } = productData;
     const qty = Number(productData.qty ?? 1);
@@ -38,10 +37,6 @@ const addItem = async (userId, productData) => {
 
   if (!Number.isInteger(qty) || qty < 1) {
     throw new Error("Quantity must be a positive integer");
-  }
-
-  if (qty < 1) {
-    throw new Error("Quantity must be at least 1");
   }
 
   let cart = await Cart.findOne({ userId });
@@ -55,10 +50,8 @@ const addItem = async (userId, productData) => {
   );
 
   if (existingItem) {
-    //Product already in cart - just increase qty
     existingItem.qty += qty;
   } else {
-    //push to items array
     cart.items.push({ 
         productId: String(productId), 
         name, 
@@ -75,7 +68,6 @@ const addItem = async (userId, productData) => {
 };
 
 // UPDATE ITEM QUANTITY
-// Sets the qty of a specific cart item. Removes item if qty <= 0.
 const updateItemQty = async (userId, productId, qty) => {
   const cart = await Cart.findOne({ userId });
 
@@ -92,7 +84,6 @@ const updateItemQty = async (userId, productId, qty) => {
   }
 
   if (qty <= 0) {
-    // Remove item if qty drops to 0 or below
     cart.items.splice(itemIndex, 1);
   } else {
     cart.items[itemIndex].qty = qty;
@@ -103,7 +94,6 @@ const updateItemQty = async (userId, productId, qty) => {
 };
 
 // REMOVE ITEM
-// Removes a single product from the cart completely.
 const removeItem = async (userId, productId) => {
   const cart = await Cart.findOne({ userId });
 
@@ -126,7 +116,6 @@ const removeItem = async (userId, productId) => {
 };
 
 // CLEAR CART
-// Removes all items from cart. Called after successful order placement.
 const clearCart = async (userId) => {
   const cart = await Cart.findOne({ userId });
 
@@ -143,7 +132,6 @@ const clearCart = async (userId) => {
 };
 
 // APPLY COUPON
-// Validates and applies a coupon code to the cart.
 const applyCoupon = async (userId, couponCode) => {
   const code = couponCode?.trim()?.toUpperCase();
 
@@ -175,7 +163,6 @@ const applyCoupon = async (userId, couponCode) => {
 };
 
 // REMOVE COUPON
-// Clears any applied coupon from the cart.
 const removeCoupon = async (userId) => {
   const cart = await Cart.findOne({ userId });
 
@@ -190,6 +177,20 @@ const removeCoupon = async (userId) => {
   return cart;
 };
 
+// UPDATE LOCATION
+const updateLocation = async (userId, isWithinColombo) => {
+  const cart = await Cart.findOne({ userId });
+
+  if (!cart) {
+    throw new Error("Cart not found");
+  }
+
+  cart.isWithinColombo = isWithinColombo;
+
+  await cart.save();
+  return cart;
+};
+
 module.exports = {
   getCart,
   addItem,
@@ -198,4 +199,5 @@ module.exports = {
   clearCart,
   applyCoupon,
   removeCoupon,
+  updateLocation,
 };

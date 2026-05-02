@@ -77,6 +77,13 @@ const parentMenus = [
     order: 7,
     isSuperAdminOnly: false,
   },
+  {
+    name: 'Delivery Management',
+    code: 'DELIVERY_MANAGEMENT',
+    icon: 'truck',
+    order: 9,
+    isSuperAdminOnly: false,
+  },
 ];
 
 // ─── MENUS ────────────────────────────────────────────────────────
@@ -188,6 +195,22 @@ const menus = [
     parentMenuCode: 'PAYMENT_LOGS',
     icon: 'credit-card',
     order: 1,
+  },
+
+  // ── Delivery Management ──
+  {
+    name: 'Logistics',
+    code: 'LOGISTICS',
+    parentMenuCode: 'DELIVERY_MANAGEMENT',
+    icon: 'map',
+    order: 1,
+  },
+  {
+    name: 'Fleet Control',
+    code: 'FLEET_CONTROL',
+    parentMenuCode: 'DELIVERY_MANAGEMENT',
+    icon: 'users',
+    order: 2,
   },
 ];
 
@@ -397,6 +420,40 @@ const screens = [
     route: '/inventory',
     description: 'Admin: manage stock levels, set min/max/reorder and alert suppliers',
     order: 1,
+  },
+
+  // ── Delivery Logistics ──
+  {
+    name: 'Order Assignment',
+    code: 'SCREEN_DELIVERY_ASSIGNMENT',
+    menuCode: 'LOGISTICS',
+    route: '/admin/delivery-assignment',
+    description: 'Admin: Assign orders to nearby drivers (FIFO)',
+    order: 1,
+  },
+  {
+    name: 'All Drivers',
+    code: 'SCREEN_ALL_DRIVERS',
+    menuCode: 'FLEET_CONTROL',
+    route: '/admin/drivers',
+    description: 'View and manage all delivery partners',
+    order: 1,
+  },
+  {
+    name: 'Add Driver',
+    code: 'SCREEN_ADD_DRIVER',
+    menuCode: 'FLEET_CONTROL',
+    route: '/admin/add-driver',
+    description: 'Register and onboard a new delivery partner',
+    order: 2,
+  },
+  {
+    name: 'Revenue & Commission',
+    code: 'SCREEN_COMMISSION_REVENUE',
+    menuCode: 'LOGISTICS',
+    route: '/admin/commission-revenue',
+    description: 'Admin: Track delivery revenue and process payouts',
+    order: 2,
   },
 ];
 

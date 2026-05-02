@@ -23,7 +23,7 @@ import InventoryPage from "./InventoryManagment/Inventorypage";
 import TransactionsPage from "./InventoryManagment/TransactionsPage";
 import AccountingPage from "./InventoryManagment/AccountingPage";
 import { SocketProvider } from "./context/SocketContext";
-import DriverRegisterPage from "./pages/DriverRegisterPage";
+
 import DriverDashboardPage from "./pages/DriverDashboardPage";
 import DeliveryTrackingPage from "./pages/DeliveryTrackingPage";
 import AdminAssignmentPage from "./pages/AdminAssignmentPage";
@@ -33,6 +33,8 @@ import OrderDetailPage from "./OrderManagement/OrderDetailPage";
 import DriversPage from "./pages/DriversPage";
 import DriverOrdersPage from "./pages/DriverOrdersPage";
 import DriverSettingsPage from "./pages/DriverSettingsPage";
+import AddDeliveryPartnerPage from "./pages/AddDeliveryPartnerPage";
+import CommissionRevenuePage from "./pages/CommissionRevenuePage";
 
 export default function App() {
   const driverId = localStorage.getItem("fc_driver_id") || "";
@@ -200,7 +202,7 @@ export default function App() {
             }
           />
 
-          <Route path="/driver/register" element={<DriverRegisterPage />} />
+
           <Route
             path="/driver/dashboard"
             element={<DriverDashboardPage driverId={driverId} />}
@@ -221,6 +223,14 @@ export default function App() {
             }
           />
           <Route
+            path="/drivers"
+            element={
+              <PrivateRoute>
+                <DriversPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/driver/orders"
             element={
               <PrivateRoute>
@@ -233,6 +243,14 @@ export default function App() {
           <Route
             path="/admin/delivery-assignment"
             element={<AdminAssignmentPage />}
+          />
+          <Route
+            path="/admin/add-driver"
+            element={<AddDeliveryPartnerPage />}
+          />
+          <Route
+            path="/admin/commission-revenue"
+            element={<CommissionRevenuePage />}
           />
           <Route
             path="/driver/profile"
