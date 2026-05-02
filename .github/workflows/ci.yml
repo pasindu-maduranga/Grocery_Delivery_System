@@ -16,11 +16,11 @@ jobs:
     name: 🛡️ SonarCloud Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           fetch-depth: 0
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarcloud-github-action@400c7659dc47690f30c691361958b4b74f07328c # v2.1.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -34,10 +34,10 @@ jobs:
       acr_server: ${{ steps.login-acr.outputs.registry }}
     steps:
       - name: ⬇️ Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: 🔑 Login to Azure
-        uses: azure/login@v1
+        uses: azure/login@6c258c41ca8d10334a11f2693da7e411516cfd21 # v1.4.6
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
@@ -88,7 +88,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 🔑 Login to Azure
-        uses: azure/login@v1
+        uses: azure/login@6c258c41ca8d10334a11f2693da7e411516cfd21 # v1.4.6
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
