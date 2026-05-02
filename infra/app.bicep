@@ -9,6 +9,9 @@ param envVars array = []
 resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: appName
   location: location
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     managedEnvironmentId: environmentId
     configuration: {
