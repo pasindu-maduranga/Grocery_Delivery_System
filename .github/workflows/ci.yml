@@ -1,122 +1,121 @@
-name: 🐳 Build & Push Docker Images to ACR
+name: 🚀 Full DevOps CI/CD (Build, Scan, Deploy)
 
 on:
   push:
-    branches: [ "main", "development" ]
-  pull_request:
     branches: [ "main" ]
-  workflow_dispatch: # Allow manual trigger from GitHub UI
-
-# ──────────────────────────────────────────────────────────────────
-# HOW THIS WORKS:
-# 1. You push code to GitHub
-# 2. This pipeline runs automatically on GitHub's servers
-# 3. It builds all 6 Docker images
-# 4. Pushes them to your Azure Container Registry
-# 5. Then you run: .\update-azure.ps1 (takes ~30 seconds)
-#    to tell Azure to use the new images
-# ──────────────────────────────────────────────────────────────────
-
-# These values come from GitHub Secrets (Settings → Secrets → Actions)
-# You need to add TWO secrets:
-#   ACR_USERNAME  = grocerydeliveryacr
-#   ACR_PASSWORD  = (your ACR password from az acr credential show)
+  workflow_dispatch:
 
 env:
-  ACR: grocerydeliveryacr.azurecr.io
-  DOMAIN: redcliff-0ea51bff.eastus.azurecontainerapps.io
+  ACR_NAME: grocerydeliveryacr${{ github.run_id }} # Dynamic for fresh account or set to fixed
+  RG_NAME: grocery-delivery-rg
+  LOCATION: eastus
 
 jobs:
-  build-and-push:
-    name: 🐳 Build & Push All Images
+  # 1. SCAN: Security & Quality Scan with SonarCloud
+  sonarcloud:
+    name: 🛡️ SonarCloud Scan
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          fetch-depth: 0
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@400c7659dc47690f30c691361958b4b74f07328c # v2.1.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+  # 2. BUILD: Build and Push Docker Images
+  build-and-push:
+    name: 🐳 Build & Push Images
+    needs: sonarcloud
+    runs-on: ubuntu-latest
+    outputs:
+      acr_server: ${{ steps.login-acr.outputs.registry }}
     steps:
       - name: ⬇️ Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - name: 🔑 Login to Azure Container Registry
-        uses: docker/login-action@v3
+      - name: 🔑 Login to Azure
+        uses: azure/login@6c258c41ca8d10334a11f2693da7e411516cfd21 # v1.4.6
         with:
-          registry: ${{ env.ACR }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # ── Backend Services ─────────────────────────────────────
-
-      - name: 🏗️ Build & Push grocery-backend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./Grocery_Store_Management/backend/src
-          push: true
-          tags: |
-            ${{ env.ACR }}/grocery-backend:latest
-            ${{ env.ACR }}/grocery-backend:${{ github.sha }}
-
-      - name: 🏗️ Build & Push user-service
-        uses: docker/build-push-action@v5
-        with:
-          context: ./User_Management_and_Payment_Service/backend
-          push: true
-          tags: |
-            ${{ env.ACR }}/user-service:latest
-            ${{ env.ACR }}/user-service:${{ github.sha }}
-
-      - name: 🏗️ Build & Push delivery-backend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./Delivery_Management/backend
-          push: true
-          tags: |
-            ${{ env.ACR }}/delivery-backend:latest
-            ${{ env.ACR }}/delivery-backend:${{ github.sha }}
-
-      - name: 🏗️ Build & Push order-service
-        uses: docker/build-push-action@v5
-        with:
-          context: ./Order_and_Notification_Management/backend
-          push: true
-          tags: |
-            ${{ env.ACR }}/order-service:latest
-            ${{ env.ACR }}/order-service:${{ github.sha }}
-
-      # ── Frontend Services ─────────────────────────────────────
-
-      - name: 🏗️ Build & Push admin-frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          push: true
-          build-args: |
-            VITE_API_URL=https://grocery-backend.${{ env.DOMAIN }}/api
-            VITE_API_URL_ORDER=https://order-service.${{ env.DOMAIN }}/api
-          tags: |
-            ${{ env.ACR }}/admin-frontend:latest
-            ${{ env.ACR }}/admin-frontend:${{ github.sha }}
-
-      - name: 🏗️ Build & Push customer-frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend-customer
-          push: true
-          build-args: |
-            VITE_API_URL_USER_MANAGEMENT_SERVICE=https://user-service.${{ env.DOMAIN }}/api
-            VITE_API_URL_GROCERY_MANAGEMENT_SERVICE=https://grocery-backend.${{ env.DOMAIN }}/api
-            VITE_STRIPE_PUBLISHABLE_KEY=${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}
-          tags: |
-            ${{ env.ACR }}/customer-frontend:latest
-            ${{ env.ACR }}/customer-frontend:${{ github.sha }}
-
-      - name: ✅ Summary
+      - name: 🔑 Get ACR Credentials
+        id: login-acr
         run: |
-          echo "================================================"
-          echo "✅ All 6 images pushed to ACR!"
-          echo "================================================"
-          echo ""
-          echo "🔜 NEXT STEP: Run update-azure.ps1 on your laptop"
-          echo "   to tell Container Apps to use the new images."
-          echo ""
-          echo "   Command: powershell -File update-azure.ps1"
-          echo ""
-          echo "   Image tag: ${{ github.sha }}"
-          echo "================================================"
+          ACR_LOGIN_SERVER=$(az acr list --query "[0].loginServer" -o tsv)
+          echo "registry=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
+          az acr login --name $(az acr list --query "[0].name" -o tsv)
+
+      - name: 🏗️ Build & Push Backends
+        run: |
+          docker build ./Grocery_Store_Management/backend/src -t ${{ steps.login-acr.outputs.registry }}/grocery-backend:${{ github.sha }} -t ${{ steps.login-acr.outputs.registry }}/grocery-backend:latest
+          docker push ${{ steps.login-acr.outputs.registry }}/grocery-backend --all-tags
+          
+          docker build ./User_Management_and_Payment_Service/backend -t ${{ steps.login-acr.outputs.registry }}/user-service:${{ github.sha }} -t ${{ steps.login-acr.outputs.registry }}/user-service:latest
+          docker push ${{ steps.login-acr.outputs.registry }}/user-service --all-tags
+
+          docker build ./Delivery_Management/backend -t ${{ steps.login-acr.outputs.registry }}/delivery-backend:${{ github.sha }} -t ${{ steps.login-acr.outputs.registry }}/delivery-backend:latest
+          docker push ${{ steps.login-acr.outputs.registry }}/delivery-backend --all-tags
+
+          docker build ./Order_and_Notification_Management/backend -t ${{ steps.login-acr.outputs.registry }}/order-service:${{ github.sha }} -t ${{ steps.login-acr.outputs.registry }}/order-service:latest
+          docker push ${{ steps.login-acr.outputs.registry }}/order-service --all-tags
+
+      - name: 🏗️ Build & Push Frontends
+        run: |
+          # Note: Build args should point to the public Azure URLs
+          DOMAIN=$(az containerapp env show --name grocery-delivery-env --resource-group ${{ env.RG_NAME }} --query "properties.defaultDomain" -o tsv)
+          
+          docker build ./frontend \
+            --build-arg VITE_API_URL=https://grocery-backend.$DOMAIN/api \
+            --build-arg VITE_API_URL_ORDER=https://order-service.$DOMAIN/api \
+            -t ${{ steps.login-acr.outputs.registry }}/admin-frontend:${{ github.sha }} \
+            -t ${{ steps.login-acr.outputs.registry }}/admin-frontend:latest
+          docker push ${{ steps.login-acr.outputs.registry }}/admin-frontend --all-tags
+
+          docker build ./frontend-customer \
+            --build-arg VITE_API_URL_USER_MANAGEMENT_SERVICE=https://user-service.$DOMAIN/api \
+            --build-arg VITE_API_URL_GROCERY_MANAGEMENT_SERVICE=https://grocery-backend.$DOMAIN/api \
+            -t ${{ steps.login-acr.outputs.registry }}/customer-frontend:${{ github.sha }} \
+            -t ${{ steps.login-acr.outputs.registry }}/customer-frontend:latest
+          docker push ${{ steps.login-acr.outputs.registry }}/customer-frontend --all-tags
+
+  # 3. DEPLOY: Update Azure Container Apps
+  deploy:
+    name: 🚀 Deploy to Azure
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔑 Login to Azure
+        uses: azure/login@6c258c41ca8d10334a11f2693da7e411516cfd21 # v1.4.6
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: 🚀 Update Container Apps
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          RG_NAME: ${{ env.RG_NAME }}
+        run: |
+          ACR_SERVER=${{ needs.build-and-push.outputs.acr_server }}
+          
+          # Deploy with Environment Variables
+          az containerapp update -n grocery-backend -g $RG_NAME \
+            --image $ACR_SERVER/grocery-backend:${{ github.sha }} \
+            --set-env-vars MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET
+
+          az containerapp update -n user-service -g $RG_NAME \
+            --image $ACR_SERVER/user-service:${{ github.sha }} \
+            --set-env-vars MONGO_URI=$MONGO_URI
+
+          az containerapp update -n delivery-backend -g $RG_NAME \
+            --image $ACR_SERVER/delivery-backend:${{ github.sha }} \
+            --set-env-vars MONGO_URI=$MONGO_URI
+
+          az containerapp update -n order-service -g $RG_NAME \
+            --image $ACR_SERVER/order-service:${{ github.sha }} \
+            --set-env-vars MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET
+
+          az containerapp update -n admin-frontend -g $RG_NAME --image $ACR_SERVER/admin-frontend:${{ github.sha }}
+          az containerapp update -n customer-frontend -g $RG_NAME --image $ACR_SERVER/customer-frontend:${{ github.sha }}
