@@ -19,11 +19,24 @@
   "main": "Server.js",
   "type": "commonjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon Server.js",
     "start:prod": "node Server.js",
-    "seed": "node seed.js"
+    "seed": "node seed.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "jest": "^30.3.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coverageDirectory": "coverage",
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ]
+  }
 }
