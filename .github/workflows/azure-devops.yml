@@ -5,6 +5,11 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
+# Prevent multiple deployments from running concurrently
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   ACR_NAME: grocerydeliveryacr${{ github.run_id }} 
   RG_NAME: grocery-delivery-rg
@@ -87,33 +92,58 @@ jobs:
           ACR_ID=$(az acr list --query "[0].id" -o tsv)
           SHA=${{ github.sha }}
           
-          # Function to give an app permission to pull from ACR
-          setup_app_auth() {
+          # Function to wait for provisioning to complete
+          wait_for_provisioning() {
             local app_name=$1
-            echo "Setting up auth for $app_name..."
-            # 1. Enable System Identity
-            PRINCIPAL_ID=$(az containerapp identity assign -n $app_name -g $RG_NAME --query "principalId" -o tsv)
-            # 2. Assign AcrPull Role
-            az role assignment create --assignee $PRINCIPAL_ID --scope $ACR_ID --role "AcrPull" || true
-            # 3. Configure app to use identity for registry
-            az containerapp registry set -n $app_name -g $RG_NAME --server $ACR_SERVER --identity system
+            echo "Checking provisioning state for $app_name..."
+            for i in {1..10}; do
+              STATE=$(az containerapp show -n $app_name -g $RG_NAME --query "properties.provisioningState" -o tsv)
+              if [[ "$STATE" != "InProgress" ]]; then
+                echo "$app_name is $STATE."
+                return 0
+              fi
+              echo "Provisioning in progress for $app_name... waiting 10s (attempt $i/10)"
+              sleep 10
+            done
+            echo "Timed out waiting for $app_name"
           }
 
-          # Apply auth and update each app
-          setup_app_auth "grocery-backend"
-          az containerapp update -n grocery-backend -g $RG_NAME --image $ACR_SERVER/grocery-backend:$SHA --set-env-vars MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET
+          # Function to give an app permission and update it in one go if possible
+          deploy_app() {
+            local app_name=$1
+            local image=$2
+            local env_vars=$3
+            
+            echo "Deploying $app_name..."
+            
+            # 1. Ensure system identity is enabled and wait for it
+            PRINCIPAL_ID=$(az containerapp identity assign -n $app_name -g $RG_NAME --query "principalId" -o tsv)
+            wait_for_provisioning $app_name
+            
+            # 2. Assign AcrPull Role (No provisioning change here usually)
+            az role assignment create --assignee $PRINCIPAL_ID --scope $ACR_ID --role "AcrPull" || true
+            
+            # 3. Update app with image, env vars, and registry settings combined
+            # This minimizes the number of provisioning cycles
+            if [ -z "$env_vars" ]; then
+              az containerapp update -n $app_name -g $RG_NAME \
+                --image $image \
+                --registry-server $ACR_SERVER \
+                --registry-identity system
+            else
+              az containerapp update -n $app_name -g $RG_NAME \
+                --image $image \
+                --set-env-vars $env_vars \
+                --registry-server $ACR_SERVER \
+                --registry-identity system
+            fi
+            wait_for_provisioning $app_name
+          }
 
-          setup_app_auth "user-service"
-          az containerapp update -n user-service -g $RG_NAME --image $ACR_SERVER/user-service:$SHA --set-env-vars MONGO_URI=$MONGO_URI
-
-          setup_app_auth "delivery-backend"
-          az containerapp update -n delivery-backend -g $RG_NAME --image $ACR_SERVER/delivery-backend:$SHA --set-env-vars MONGO_URI=$MONGO_URI
-
-          setup_app_auth "order-service"
-          az containerapp update -n order-service -g $RG_NAME --image $ACR_SERVER/order-service:$SHA --set-env-vars MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET
-
-          setup_app_auth "admin-frontend"
-          az containerapp update -n admin-frontend -g $RG_NAME --image $ACR_SERVER/admin-frontend:$SHA
-
-          setup_app_auth "customer-frontend"
-          az containerapp update -n customer-frontend -g $RG_NAME --image $ACR_SERVER/customer-frontend:$SHA
+          # Deploy each app using the optimized function
+          deploy_app "grocery-backend" "$ACR_SERVER/grocery-backend:$SHA" "MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET"
+          deploy_app "user-service" "$ACR_SERVER/user-service:$SHA" "MONGO_URI=$MONGO_URI"
+          deploy_app "delivery-backend" "$ACR_SERVER/delivery-backend:$SHA" "MONGO_URI=$MONGO_URI"
+          deploy_app "order-service" "$ACR_SERVER/order-service:$SHA" "MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET"
+          deploy_app "admin-frontend" "$ACR_SERVER/admin-frontend:$SHA" ""
+          deploy_app "customer-frontend" "$ACR_SERVER/customer-frontend:$SHA" ""
