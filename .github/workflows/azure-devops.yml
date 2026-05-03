@@ -5,18 +5,15 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-# Prevent multiple deployments from running concurrently
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  ACR_NAME: grocerydeliveryacr${{ github.run_id }} 
   RG_NAME: grocery-delivery-rg
   LOCATION: eastus
 
 jobs:
-  # 1. SCAN: Quality Check
   security-scan:
     name: 🛡️ SonarCloud Scan
     runs-on: ubuntu-latest
@@ -31,7 +28,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  # 2. DEPLOY: Build & Push to Azure
   build-and-deploy:
     name: 🚀 Build & Deploy to Azure
     runs-on: ubuntu-latest
@@ -44,87 +40,83 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: 🏗️ Get Registry Server
+      - name: 🏗️ Get Registry Info
         id: login-acr
         run: |
-          ACR_SERVER=$(az acr list --query "[0].loginServer" -o tsv)
-          echo "registry=$ACR_SERVER" >> $GITHUB_OUTPUT
-          az acr login --name $(az acr list --query "[0].name" -o tsv)
+          # ✅ Get ACR name and server (fixed - not using run_id)
+          ACR_NAME=$(az acr list --resource-group ${{ env.RG_NAME }} --query "[0].name" -o tsv)
+          ACR_SERVER=$(az acr list --resource-group ${{ env.RG_NAME }} --query "[0].loginServer" -o tsv)
+          ACR_ID=$(az acr list --resource-group ${{ env.RG_NAME }} --query "[0].id" -o tsv)
+          
+          echo "acr_name=$ACR_NAME" >> $GITHUB_OUTPUT
+          echo "acr_server=$ACR_SERVER" >> $GITHUB_OUTPUT
+          echo "acr_id=$ACR_ID" >> $GITHUB_OUTPUT
+          
+          az acr login --name $ACR_NAME
 
       - name: 🐳 Build & Push Images
         run: |
-          ACR=${{ steps.login-acr.outputs.registry }}
+          ACR=${{ steps.login-acr.outputs.acr_server }}
+          SHA=${{ github.sha }}
+
           # Backend Services
-          docker build ./Grocery_Store_Management/backend/src -t $ACR/grocery-backend:${{ github.sha }} -t $ACR/grocery-backend:latest
+          docker build ./Grocery_Store_Management/backend/src -t $ACR/grocery-backend:$SHA -t $ACR/grocery-backend:latest
           docker push $ACR/grocery-backend --all-tags
-          
-          docker build ./User_Management_and_Payment_Service/backend -t $ACR/user-service:${{ github.sha }} -t $ACR/user-service:latest
+
+          docker build ./User_Management_and_Payment_Service/backend -t $ACR/user-service:$SHA -t $ACR/user-service:latest
           docker push $ACR/user-service --all-tags
 
-          docker build ./Delivery_Management/backend -t $ACR/delivery-backend:${{ github.sha }} -t $ACR/delivery-backend:latest
+          docker build ./Delivery_Management/backend -t $ACR/delivery-backend:$SHA -t $ACR/delivery-backend:latest
           docker push $ACR/delivery-backend --all-tags
 
-          docker build ./Order_and_Notification_Management/backend -t $ACR/order-service:${{ github.sha }} -t $ACR/order-service:latest
+          docker build ./Order_and_Notification_Management/backend -t $ACR/order-service:$SHA -t $ACR/order-service:latest
           docker push $ACR/order-service --all-tags
 
           # Frontend Services
-          DOMAIN=$(az containerapp env show --name grocery-delivery-env --resource-group ${{ env.RG_NAME }} --query "properties.defaultDomain" -o tsv)
-          
+          DOMAIN=$(az containerapp env show \
+            --name grocery-delivery-env \
+            --resource-group ${{ env.RG_NAME }} \
+            --query "properties.defaultDomain" -o tsv)
+
           docker build ./frontend \
             --build-arg VITE_API_URL=https://grocery-backend.$DOMAIN/api \
             --build-arg VITE_API_URL_ORDER=https://order-service.$DOMAIN/api \
-            -t $ACR/admin-frontend:${{ github.sha }} -t $ACR/admin-frontend:latest
+            -t $ACR/admin-frontend:$SHA -t $ACR/admin-frontend:latest
           docker push $ACR/admin-frontend --all-tags
 
           docker build ./frontend-customer \
             --build-arg VITE_API_URL_USER_MANAGEMENT_SERVICE=https://user-service.$DOMAIN/api \
             --build-arg VITE_API_URL_GROCERY_MANAGEMENT_SERVICE=https://grocery-backend.$DOMAIN/api \
-            -t $ACR/customer-frontend:${{ github.sha }} -t $ACR/customer-frontend:latest
+            -t $ACR/customer-frontend:$SHA -t $ACR/customer-frontend:latest
           docker push $ACR/customer-frontend --all-tags
 
-      - name: 🚀 Update Azure Apps
-        env:
-          MONGO_URI: ${{ secrets.MONGO_URI }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          RG_NAME: ${{ env.RG_NAME }}
+      - name: 🚀 Deploy All Apps
         run: |
-          ACR_SERVER=$(az acr list --query "[0].loginServer" -o tsv)
-          ACR_ID=$(az acr list --query "[0].id" -o tsv)
+          # ✅ All variables properly defined here
+          ACR_SERVER=${{ steps.login-acr.outputs.acr_server }}
+          ACR_ID=${{ steps.login-acr.outputs.acr_id }}
           SHA=${{ github.sha }}
-          
-          # Function to wait for provisioning to complete
-          wait_for_provisioning() {
-            local app_name=$1
-            echo "Checking provisioning state for $app_name..."
-            for i in {1..10}; do
-              STATE=$(az containerapp show -n $app_name -g $RG_NAME --query "properties.provisioningState" -o tsv)
-              if [[ "$STATE" != "InProgress" ]]; then
-                echo "$app_name is $STATE."
-                return 0
-              fi
-              echo "Provisioning in progress for $app_name... waiting 10s (attempt $i/10)"
-              sleep 10
-            done
-            echo "Timed out waiting for $app_name"
-          }
+          RG_NAME=${{ env.RG_NAME }}
+          MONGO_URI="${{ secrets.MONGO_URI }}"
+          JWT_SECRET="${{ secrets.JWT_SECRET }}"
 
-          # Function to give an app permission and update it in one go if possible
           deploy_app() {
             local app_name=$1
             local image=$2
             local env_vars=$3
-            
+
             echo "Deploying $app_name..."
-            
-            # 1. Ensure system identity is enabled and wait for it
-            PRINCIPAL_ID=$(az containerapp identity assign -n $app_name -g $RG_NAME --query "principalId" -o tsv)
-            wait_for_provisioning $app_name
-            
-            # 2. Assign AcrPull Role (No provisioning change here usually)
-            az role assignment create --assignee $PRINCIPAL_ID --scope $ACR_ID --role "AcrPull" || true
-            
-            # 3. Update app with image, env vars, and registry settings combined
-            # This minimizes the number of provisioning cycles
+
+            PRINCIPAL_ID=$(az containerapp identity assign \
+              -n $app_name -g $RG_NAME \
+              --system-assigned \
+              --query "principalId" -o tsv)
+
+            az role assignment create \
+              --assignee $PRINCIPAL_ID \
+              --scope $ACR_ID \
+              --role "AcrPull" 2>/dev/null || true
+
             if [ -z "$env_vars" ]; then
               az containerapp update -n $app_name -g $RG_NAME \
                 --image $image \
@@ -137,13 +129,15 @@ jobs:
                 --registry-server $ACR_SERVER \
                 --registry-identity system
             fi
-            wait_for_provisioning $app_name
+            echo "✅ $app_name deployed!"
           }
 
-          # Deploy each app using the optimized function
+          # Deploy all apps
           deploy_app "grocery-backend" "$ACR_SERVER/grocery-backend:$SHA" "MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET"
           deploy_app "user-service" "$ACR_SERVER/user-service:$SHA" "MONGO_URI=$MONGO_URI"
           deploy_app "delivery-backend" "$ACR_SERVER/delivery-backend:$SHA" "MONGO_URI=$MONGO_URI"
           deploy_app "order-service" "$ACR_SERVER/order-service:$SHA" "MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET"
           deploy_app "admin-frontend" "$ACR_SERVER/admin-frontend:$SHA" ""
           deploy_app "customer-frontend" "$ACR_SERVER/customer-frontend:$SHA" ""
+
+          echo "🎉 All apps deployed successfully!"
