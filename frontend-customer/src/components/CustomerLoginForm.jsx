@@ -105,7 +105,7 @@ const CustomerLoginForm = () => {
             <ShoppingCart className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-800 mb-1">
-            Welcome Back
+            Welcome Back!!
           </h1>
           <p className="text-gray-500 text-sm">
             Sign in to your{" "}
