@@ -6,20 +6,31 @@ const updateProfile = async (user, body) => {
     const updates = Object.keys(body);
     const allowedUpdates = ['name', 'email', 'phoneNo', 'address'];
 
-    const isValidOperation = updates.every(update =>
-        allowedUpdates.includes(update)
+    const aliases = {
+        phone: 'phoneNo',
+        phoneNumber: 'phoneNo'
+    };
+
+    const normalizedBody = {};
+    Object.entries(body || {}).forEach(([key, value]) => {
+        const mappedKey = aliases[key] || key;
+        normalizedBody[mappedKey] = value;
+    });
+
+    // keep only allowed fields
+    const edits = Object.keys(normalizedBody).filter((key) =>
+        allowedUpdates.includes(key)
     );
 
-    if (!isValidOperation) {
-        throw new Error('Invalid updates');
+    if (edits.length === 0) {
+        throw new Error('No valid fields to update');
     }
 
-    updates.forEach(update => {
-        user[update] = body[update];
+    edits.forEach((key) => {
+        user[key] = normalizedBody[key];
     });
 
     await user.save();
-
     return user;
 };
 

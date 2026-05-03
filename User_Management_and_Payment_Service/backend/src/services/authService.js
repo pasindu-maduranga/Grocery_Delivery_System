@@ -3,27 +3,13 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const sendEmail = require("../utils/emailUtils");
 const generateAccessToken = require("../utils/generateToken");
+const axios = require("axios");
 
-//register new user
+const DELIVERY_SERVICE_URL = process.env.DELIVERY_SERVICE_URL || 'http://localhost:5005/api';
+
+// Register User
 const registerUser = async (data) => {
-  const {
-    name,
-    email,
-    password,
-    phoneNo,
-    address,
-    role,
-    // businessName,
-    // businessAddress,
-    // taxId,
-    // businessPhoneNo,
-    // ItemTypes,
-    // vehicleType,
-    // licensePlate,
-    // currentLocation,
-    // isAvailable,
-    // currentOrders,
-  } = data;
+  const { name, email, password, phoneNo, address, role, location } = data;
 
   const existingUser = await User.findOne({ email });
   if (existingUser) {
@@ -40,29 +26,86 @@ const registerUser = async (data) => {
     address,
     role: role || "customer",
     isVerified: true,
-    // businessName,
-    // businessAddress,
-    // taxId,
-    // businessPhoneNo,
-    // ItemTypes,
-    // vehicleType,
-    // licensePlate,
-    // currentLocation,
-    // isAvailable,
-    // currentOrders,
+    location: location || {},
   });
 
   await user.save();
 
   const token = generateAccessToken(user);
 
-  return {
-    user,
-    token,
-  };
+  return { user, token };
 };
 
-//login
+// Admin creating driver
+const createDriver = async (data) => {
+  const { name, email, phoneNo, address, vehicleType, district, isWithinColombo, maxCarryWeightKg, licensePlate } = data;
+  
+  const existingUser = await User.findOne({ email });
+  if (existingUser) throw new Error("Email already registered");
+
+  // Generate a random password for the driver
+  const temporalPassword = crypto.randomBytes(4).toString('hex');
+  const hashedPassword = await bcrypt.hash(temporalPassword, 10);
+
+  const user = new User({
+    name,
+    email,
+    password: hashedPassword,
+    phoneNo,
+    address,
+    role: "delivery_person",
+    isVerified: true,
+    location: {
+        address: address,
+        latitude: isWithinColombo ? 6.9147 : 7.2906, // Example coords for Colombo vs Kandy if not provided
+        longitude: isWithinColombo ? 79.8612 : 80.6337
+    }
+  });
+
+  await user.save();
+
+  // Send credentials email
+  const html = `
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+      <h2 style="color: #2e7d32;">Welcome to RapidCart Delivery Team!</h2>
+      <p>Hello ${name},</p>
+      <p>You have been registered as a delivery rider. Use the following credentials to login:</p>
+      <div style="background: #f1f8e9; padding: 15px; border-radius: 8px; border: 1px solid #c8e6c9; margin: 20px 0;">
+        <p><strong>Username/Email:</strong> ${email}</p>
+        <p><strong>Password:</strong> ${temporalPassword}</p>
+      </div>
+      <p>Please login and update your profile and live location to start receiving orders.</p>
+      <p>Best Regards,<br/>RapidCart Admin Team</p>
+    </div>
+  `;
+
+  await sendEmail({
+    to: email,
+    subject: "RapidCart-Your Delivery Driver Account",
+    html,
+  });
+
+  // Call Delivery Service to create Driver record
+  try {
+    await axios.post(`${DELIVERY_SERVICE_URL}/drivers/register`, {
+      userId: user._id.toString(),
+      name,
+      email,
+      phone: phoneNo,
+      vehicleType,
+      district,
+      isWithinColombo: !!isWithinColombo,
+      maxCarryWeightKg,
+      licensePlate
+    });
+  } catch (err) {
+    console.error("Failed to sync driver to delivery service:", err.message);
+  }
+
+  return { user, password: temporalPassword };
+};
+
+// Login
 const loginUser = async ({ email, password }) => {
   const user = await User.findOne({ email });
   if (!user || !user.isActive) {
@@ -78,90 +121,49 @@ const loginUser = async ({ email, password }) => {
   await user.save();
 
   const token = generateAccessToken(user);
-  return {
-    user,
-    token,
-  };
+  return { user, token };
 };
 
-//forgot password
+// Forgot Password
 const forgotPassword = async (email) => {
   const user = await User.findOne({ email });
-  if (!user) {
-    throw new Error("User not found");
-  }
+  if (!user) throw new Error("User not found");
 
-  //Generate secure token and hash for storage
   const resetToken = crypto.randomBytes(32).toString("hex");
-  const hashedToken = crypto
-    .createHash("sha256")
-    .update(resetToken)
-    .digest("hex");
+  const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
 
-  //Set token & 1 hour expiry
   user.resetPasswordToken = hashedToken;
   user.resetPasswordExpires = Date.now() + 60 * 60 * 1000;
   await user.save();
 
-  //Build reset URL (frontend handles the form)
   const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+  const html = `<h2>Reset Your password</h2><p>Click <a href="${resetUrl}">here</a> to reset.</p>`;
 
-  // Email content (keep simple or make it as stylish as your welcome email)
-  const html = `
-        <h2>Reset Your Grocery Store Password</h2>
-        <p>Hello ${user.name || "User"},</p>
-        <p>Click the link below to reset your password:</p>
-        <a href="${resetUrl}" style="background:#FF6B35; color:white; padding:12px 24px; text-decoration:none; border-radius:6px; display:inline-block;">
-        Reset Password
-        </a>
-        <p>Reset Token: ${resetToken}</p>
-        <p>This link expires in 1 hour.</p>
-        <p>If you didn't request this, ignore this email.</p>
-        <p>RapidCart Team</p>
-    `;
-
-  await sendEmail({
-    to: user.email,
-    subject: "RapidCart-Password Reset Request",
-    html,
-  });
-
-  return {
-    message: "Password reset email sent. Check your inbox",
-  };
+  await sendEmail({ to: user.email, subject: "Password Reset Request", html });
+  return { message: "Email sent" };
 };
 
 const resetPassword = async ({ email, token, newPassword }) => {
-  if (!token || !newPassword) {
-    throw new Error("Invalid request: token and password required");
-  }
-
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-
   const user = await User.findOne({
     email,
     resetPasswordToken: hashedToken,
     resetPasswordExpires: { $gt: Date.now() },
   });
 
-  if (!user) {
-    throw new Error("Invalid or expired reset token");
-  }
+  if (!user) throw new Error("Invalid or expired token");
 
-  // Hash and save new password
   user.password = await bcrypt.hash(newPassword, 10);
   user.resetPasswordToken = undefined;
   user.resetPasswordExpires = undefined;
   await user.save();
 
-  return {
-    message:
-      "Password reset successful. You can now log in with your new password.",
-  };
+  return { message: "Password updated" };
 };
 
 module.exports = {
   registerUser,
+  createDriver,
   loginUser,
   forgotPassword,
   resetPassword,

@@ -1,65 +1,121 @@
-name: CI Pipeline
+name: 🚀 Full DevOps CI/CD (Build, Scan, Deploy)
 
 on:
   push:
-    branches: [ "development", "main" ]
-  pull_request:
-    branches: [ "development", "main" ]
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  ACR_NAME: grocerydeliveryacr${{ github.run_id }} # Dynamic for fresh account or set to fixed
+  RG_NAME: grocery-delivery-rg
+  LOCATION: eastus
 
 jobs:
-  build-frontend:
+  # 1. SCAN: Security & Quality Scan with SonarCloud
+  sonarcloud:
+    name: 🛡️ SonarCloud Scan
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.x'
-        
-    - name: Install and Build Frontend Admin
-      working-directory: ./frontend
-      run: |
-        npm install
-        npm run build --if-present
-        
-    - name: Install and Build Frontend Customer
-      working-directory: ./frontend-customer
-      run: |
-        npm install
-        npm run build --if-present
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v3.0.0
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  build-backend-delivery:
+  # 2. BUILD: Build and Push Docker Images
+  build-and-push:
+    name: 🐳 Build & Push Images
     runs-on: ubuntu-latest
+    outputs:
+      acr_server: ${{ steps.login-acr.outputs.registry }}
     steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.x'
-    - name: Install dependencies Wait Delivery
-      working-directory: ./Delivery_Management/backend
-      run: npm install
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
 
-  build-backend-grocery:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.x'
-    - name: Install dependencies Grocery Store
-      working-directory: ./Grocery_Store_Management/backend/src
-      run: npm install
+      - name: 🔑 Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-  build-backend-user-payment:
+      - name: 🔑 Get ACR Credentials
+        id: login-acr
+        run: |
+          ACR_LOGIN_SERVER=$(az acr list --query "[0].loginServer" -o tsv)
+          echo "registry=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
+          az acr login --name $(az acr list --query "[0].name" -o tsv)
+
+      - name: 🏗️ Build & Push Backends
+        run: |
+          docker build ./Grocery_Store_Management/backend/src -t ${{ steps.login-acr.outputs.registry }}/grocery-backend:${{ github.sha }} -t ${{ steps.login-acr.outputs.registry }}/grocery-backend:latest
+          docker push ${{ steps.login-acr.outputs.registry }}/grocery-backend --all-tags
+
+          docker build ./User_Management_and_Payment_Service/backend -t ${{ steps.login-acr.outputs.registry }}/user-service:${{ github.sha }} -t ${{ steps.login-acr.outputs.registry }}/user-service:latest
+          docker push ${{ steps.login-acr.outputs.registry }}/user-service --all-tags
+
+          docker build ./Delivery_Management/backend -t ${{ steps.login-acr.outputs.registry }}/delivery-backend:${{ github.sha }} -t ${{ steps.login-acr.outputs.registry }}/delivery-backend:latest
+          docker push ${{ steps.login-acr.outputs.registry }}/delivery-backend --all-tags
+
+          docker build ./Order_and_Notification_Management/backend -t ${{ steps.login-acr.outputs.registry }}/order-service:${{ github.sha }} -t ${{ steps.login-acr.outputs.registry }}/order-service:latest
+          docker push ${{ steps.login-acr.outputs.registry }}/order-service --all-tags
+
+      - name: 🏗️ Build & Push Frontends
+        run: |
+          # Note: Build args should point to the public Azure URLs
+          DOMAIN=$(az containerapp env show --name grocery-delivery-env --resource-group ${{ env.RG_NAME }} --query "properties.defaultDomain" -o tsv)
+
+          docker build ./frontend \
+            --build-arg VITE_API_URL=https://grocery-backend.$DOMAIN/api \
+            --build-arg VITE_API_URL_ORDER=https://order-service.$DOMAIN/api \
+            -t ${{ steps.login-acr.outputs.registry }}/admin-frontend:${{ github.sha }} \
+            -t ${{ steps.login-acr.outputs.registry }}/admin-frontend:latest
+          docker push ${{ steps.login-acr.outputs.registry }}/admin-frontend --all-tags
+
+          docker build ./frontend-customer \
+            --build-arg VITE_API_URL_USER_MANAGEMENT_SERVICE=https://user-service.$DOMAIN/api \
+            --build-arg VITE_API_URL_GROCERY_MANAGEMENT_SERVICE=https://grocery-backend.$DOMAIN/api \
+            -t ${{ steps.login-acr.outputs.registry }}/customer-frontend:${{ github.sha }} \
+            -t ${{ steps.login-acr.outputs.registry }}/customer-frontend:latest
+          docker push ${{ steps.login-acr.outputs.registry }}/customer-frontend --all-tags
+
+  # 3. DEPLOY: Update Azure Container Apps
+  deploy:
+    name: 🚀 Deploy to Azure
+    needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.x'
-    - name: Install dependencies User & Payment
-      working-directory: ./User_Management_and_Payment_Service/backend
-      run: npm install
+      - name: 🔑 Login to Azure
+        uses: azure/login@6c258c41ca8d10334a11f2693da7e411516cfd21 # v1.4.6
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: 🚀 Update Container Apps
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          RG_NAME: ${{ env.RG_NAME }}
+        run: |
+          ACR_SERVER=${{ needs.build-and-push.outputs.acr_server }}
+
+          # Deploy with Environment Variables
+          az containerapp update -n grocery-backend -g $RG_NAME \
+            --image $ACR_SERVER/grocery-backend:${{ github.sha }} \
+            --set-env-vars MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET
+
+          az containerapp update -n user-service -g $RG_NAME \
+            --image $ACR_SERVER/user-service:${{ github.sha }} \
+            --set-env-vars MONGO_URI=$MONGO_URI
+
+          az containerapp update -n delivery-backend -g $RG_NAME \
+            --image $ACR_SERVER/delivery-backend:${{ github.sha }} \
+            --set-env-vars MONGO_URI=$MONGO_URI
+
+          az containerapp update -n order-service -g $RG_NAME \
+            --image $ACR_SERVER/order-service:${{ github.sha }} \
+            --set-env-vars MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET
+
+          az containerapp update -n admin-frontend -g $RG_NAME --image $ACR_SERVER/admin-frontend:${{ github.sha }}
+          az containerapp update -n customer-frontend -g $RG_NAME --image $ACR_SERVER/customer-frontend:${{ github.sha }}

@@ -1,4 +1,6 @@
 const Order = require('../models/Order');
+const Driver = require('../models/Driver');
+
 
 // ─── Receive order from customer service ─────────────────────────────────────
 const receiveOrder = async (req, res) => {
@@ -37,17 +39,17 @@ const getAllOrders = async (req, res) => {
     const { status, paymentStatus, search, page = 1, limit = 20 } = req.query;
 
     const filter = {};
-    if (status)        filter.status        = status;
+    if (status) filter.status = status;
     if (paymentStatus) filter.paymentStatus = paymentStatus;
     if (search) {
       filter.$or = [
-        { orderId:      { $regex: search, $options: 'i' } },
+        { orderId: { $regex: search, $options: 'i' } },
         { customerName: { $regex: search, $options: 'i' } },
-        { customerEmail:{ $regex: search, $options: 'i' } },
+        { customerEmail: { $regex: search, $options: 'i' } },
       ];
     }
 
-    const skip  = (Number(page) - 1) * Number(limit);
+    const skip = (Number(page) - 1) * Number(limit);
     const total = await Order.countDocuments(filter);
     const orders = await Order.find(filter)
       .sort({ createdAt: -1 })
@@ -56,11 +58,22 @@ const getAllOrders = async (req, res) => {
 
     return res.json({
       success: true,
-      data:  orders,
+      data: orders,
       total,
-      page:  Number(page),
+      page: Number(page),
       pages: Math.ceil(total / Number(limit)),
     });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ─── Get customer's orders ────────────────────────────────────────────────────
+const getMyOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({ customerId: req.user.id })
+      .sort({ createdAt: -1 });
+    return res.json({ success: true, data: orders });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -80,7 +93,7 @@ const getOrderById = async (req, res) => {
 // ─── Update order status (admin) ──────────────────────────────────────────────
 const updateOrderStatus = async (req, res) => {
   try {
-    const { status, adminNotes } = req.body;
+    const { status, adminNotes, driverId } = req.body;
 
     const VALID = ['pending', 'confirmed', 'processing', 'ready', 'out_for_delivery', 'delivered', 'cancelled'];
     if (!VALID.includes(status)) {
@@ -98,9 +111,17 @@ const updateOrderStatus = async (req, res) => {
       note: adminNotes || '',
     });
 
-    order.status     = status;
+    order.status = status;
     order.adminNotes = adminNotes || order.adminNotes;
+    if (driverId) {
+      order.assignedDriverId = driverId;
+      order.assignmentStatus = 'accepted';
+    }
     await order.save();
+
+    if (driverId && status === 'out_for_delivery') {
+      await Driver.findByIdAndUpdate(driverId, { isAvailable: false });
+    }
 
     // Sync back to User Management Service
     try {
@@ -112,24 +133,20 @@ const updateOrderStatus = async (req, res) => {
         'ready': 'prepared',
         'out_for_delivery': 'pickup',
         'delivered': 'delivered',
-        'cancelled': 'cancelled'
+        'cancelled': 'cancelled',
       };
       const userMgmtStatus = statusMap[status] || status;
-      
-      console.log(`[DEBUG] Syncing order ${order.orderId} to status: ${userMgmtStatus}`);
-      console.log(`[DEBUG] Target URL: http://localhost:5003/api/admin/orders/status/${order.orderId}`);
 
-      // order.orderId is the _id in the User_Management database
-      const syncRes = await axios.patch(`http://localhost:5003/api/admin/orders/status/${order.orderId}`, 
+      console.log(`[DEBUG] Syncing order ${order.orderId} to status: ${userMgmtStatus}`);
+      const userMgmtBase = process.env.USER_SERVICE_URL || 'http://localhost:5003/api';
+      console.log(`[DEBUG] Target URL: ${userMgmtBase}/admin/orders/status/${order.orderId}`);
+
+      await axios.patch(`${userMgmtBase}/admin/orders/status/${order.orderId}`,
         { status: userMgmtStatus },
         { headers: { Authorization: req.headers.authorization } }
       );
-      console.log(`[DEBUG] Sync successful:`, syncRes.data.message);
     } catch (syncErr) {
-      console.error('[DEBUG] Sync failed:', syncErr.response?.data || syncErr.message);
-      if (syncErr.response?.status === 401) {
-        console.error('[DEBUG] Auth failed. Check if JWT_SECRET matches between services.');
-      }
+      console.error('[DEBUG] Sync failed:', syncErr.message);
     }
 
     return res.json({ success: true, data: order });
@@ -181,11 +198,33 @@ const deleteOrder = async (req, res) => {
   }
 };
 
+const getReadyOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({ status: 'ready' }).sort({ createdAt: 1 });
+    return res.json({ success: true, data: orders });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const getAvailableDrivers = async (req, res) => {
+  try {
+    const drivers = await Driver.find({ isAvailable: true })
+      .select('_id name vehicleType licensePlate rating currentLocation');
+    return res.json({ success: true, data: drivers });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   receiveOrder,
   getAllOrders,
+  getMyOrders,
   getOrderById,
   updateOrderStatus,
   getOrderStats,
   deleteOrder,
+  getReadyOrders,
+  getAvailableDrivers,
 };

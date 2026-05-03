@@ -148,13 +148,13 @@ export default function OrderDetailPage() {
                       <div className="text-xs text-slate-400">Qty: {item.qty}</div>
                     </div>
                   </div>
-                  <div className="font-semibold text-slate-800">${(item.price * item.qty).toFixed(2)}</div>
+                  <div className="font-semibold text-slate-800">LKR {(item.price * item.qty).toFixed(2)}</div>
                 </div>
               ))}
             </div>
             <div className="flex justify-between items-center pt-3 mt-2 border-t border-slate-100">
               <span className="font-semibold text-slate-600">Total</span>
-              <span className="text-lg font-bold text-primary-600">${order.totalAmount?.toFixed(2)}</span>
+              <span className="text-lg font-bold text-primary-600">LKR {order.totalAmount?.toFixed(2)}</span>
             </div>
           </div>
 
@@ -231,7 +231,7 @@ export default function OrderDetailPage() {
               </div>
               <div className="flex justify-between pt-2 border-t border-slate-100">
                 <span className="text-slate-500">Amount</span>
-                <span className="font-bold text-slate-800">${order.totalAmount?.toFixed(2)}</span>
+                <span className="font-bold text-slate-800">LKR {order.totalAmount?.toFixed(2)}</span>
               </div>
             </div>
           </div>

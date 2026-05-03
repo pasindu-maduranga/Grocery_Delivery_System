@@ -2,24 +2,26 @@ FROM node:20-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+RUN rm -f package-lock.json && npm install
 
 COPY . .
 
 # Vite envs are injected at build time
-ARG VITE_API_URL
+ARG VITE_API_URL_USER_MANAGEMENT_SERVICE
 ARG VITE_API_URL_GROCERY_MANAGEMENT_SERVICE
 ARG VITE_STRIPE_PUBLISHABLE_KEY
+ARG VITE_DELIVERY_SERVICE_URL
 
-ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_API_URL_USER_MANAGEMENT_SERVICE=$VITE_API_URL_USER_MANAGEMENT_SERVICE
 ENV VITE_API_URL_GROCERY_MANAGEMENT_SERVICE=$VITE_API_URL_GROCERY_MANAGEMENT_SERVICE
 ENV VITE_STRIPE_PUBLISHABLE_KEY=$VITE_STRIPE_PUBLISHABLE_KEY
+ENV VITE_DELIVERY_SERVICE_URL=$VITE_DELIVERY_SERVICE_URL
 
 RUN npm run build
 
-FROM nginx:1.27-alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
+FROM node:20-alpine
+RUN npm install -g serve
+COPY --from=build /app/dist /app/dist
+WORKDIR /app
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["serve", "-s", "dist", "-l", "80"]

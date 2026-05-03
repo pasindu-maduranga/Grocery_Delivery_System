@@ -2,36 +2,14 @@ import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
-  ShoppingCart, Settings, Users, FileText, Package, Store,
-  DollarSign, Truck, ChevronDown, ChevronRight, LogOut,
-  LayoutDashboard, Tag, Layers, CreditCard, Box, ClipboardList,
-  TrendingUp, ReceiptText, LayoutGrid
+  ShoppingCart, ChevronDown, ChevronRight, LogOut,
+  LayoutDashboard
 } from 'lucide-react'
+import { getIcon } from '../common/IconPicker.jsx'
 import React from 'react'
 
-const ICONS = {
-  settings: Settings,
-  users: Users,
-  'file-text': FileText,
-  receipt: ReceiptText,
-  package: Package,
-  'shopping-cart': ShoppingCart,
-  'dollar-sign': DollarSign,
-  truck: Truck,
-  layout: LayoutGrid,
-  'user-cog': Users,
-  tag: Tag,
-  clipboard: ClipboardList,
-  'trending-up': TrendingUp,
-  layers: Layers,
-  store: Store,
-  'credit-card': CreditCard,
-  box: Box,
-  default: FileText,
-}
-
 const Icon = ({ name, size = 18 }) => {
-  const C = ICONS[name] || ICONS.default
+  const C = getIcon(name)
   return <C size={size} />
 }
 
@@ -74,7 +52,7 @@ const SidebarMenu = ({ menu }) => {
 }
 
 export default function Sidebar() {
-  const { user, sidebar, logout } = useAuth()
+  const { user, sidebar, logout, isDriver } = useAuth()
   const navigate = useNavigate()
   const [activeParent, setActiveParent] = useState(null)
 
@@ -112,6 +90,20 @@ export default function Sidebar() {
         >
           <LayoutDashboard size={18} />
         </NavLink>
+
+        {isDriver && (
+          <NavLink
+            to="/driver/settings"
+            title="Presence Settings"
+            className={({ isActive }) =>
+              `w-10 h-10 flex items-center justify-center rounded-xl transition-all ${
+                isActive ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/50' : 'text-slate-400 hover:bg-white/10'
+              }`
+            }
+          >
+            <Icon name="settings" size={18} />
+          </NavLink>
+        )}
 
         <div className="w-6 h-px bg-white/10 my-1" />
 

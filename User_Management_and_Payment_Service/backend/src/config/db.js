@@ -1,5 +1,8 @@
 const mongoose = require('mongoose');
+const dns = require('dns');
 
+// Force reliable DNS resolvers for Atlas SRV lookups when local DNS is broken.
+dns.setServers(['8.8.8.8', '1.1.1.1']);
 const connectDB = async () => {
     try{
         await mongoose.connect(process.env.MONGO_URI);
@@ -11,3 +14,4 @@ const connectDB = async () => {
 }
 
 module.exports = connectDB;
+

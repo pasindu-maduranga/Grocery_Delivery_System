@@ -127,4 +127,24 @@ export const storefrontAPI = {
   getById: (id) => api.get(`/storefront/${id}`),
 }
 
+// ─── DELIVERY SERVICE (port 5005) ─────────────────────────────────
+const deliveryApi = axios.create({
+  baseURL: import.meta.env.VITE_DELIVERY_SERVICE_URL || 'http://localhost:5005/api',
+})
+
+deliveryApi.interceptors.request.use(cfg => {
+  const token = localStorage.getItem('token')
+  if (token) cfg.headers.Authorization = `Bearer ${token}`
+  return cfg
+})
+
+export const driversAPI = {
+  getAll: (params) => deliveryApi.get('/delivery-partners', { params }),
+  getRoles: () => deliveryApi.get('/delivery-partners/roles'),
+  approve: (id, data) => deliveryApi.patch(`/delivery-partners/${id}/approve`, data),
+  reject: (id, data) => deliveryApi.patch(`/delivery-partners/${id}/reject`, data),
+  toggleActive: (id) => deliveryApi.patch(`/delivery-partners/${id}/toggle-active`),
+  toggleLock: (id) => deliveryApi.patch(`/delivery-partners/${id}/toggle-lock`),
+}
+
 export default api
