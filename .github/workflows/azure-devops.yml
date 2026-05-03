@@ -83,12 +83,36 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           RG_NAME: ${{ env.RG_NAME }}
         run: |
-          ACR=${{ steps.login-acr.outputs.registry }}
+          ACR_SERVER=$(az acr list --query "[0].loginServer" -o tsv)
+          ACR_NAME=$(az acr list --query "[0].name" -o tsv)
+          ACR_PASS=$(az acr credential show -n $ACR_NAME --query "passwords[0].value" -o tsv)
           SHA=${{ github.sha }}
           
-          az containerapp update -n grocery-backend -g $RG_NAME --image $ACR/grocery-backend:$SHA --set-env-vars MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET
-          az containerapp update -n user-service -g $RG_NAME --image $ACR/user-service:$SHA --set-env-vars MONGO_URI=$MONGO_URI
-          az containerapp update -n delivery-backend -g $RG_NAME --image $ACR/delivery-backend:$SHA --set-env-vars MONGO_URI=$MONGO_URI
-          az containerapp update -n order-service -g $RG_NAME --image $ACR/order-service:$SHA --set-env-vars MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET
-          az containerapp update -n admin-frontend -g $RG_NAME --image $ACR/admin-frontend:$SHA
-          az containerapp update -n customer-frontend -g $RG_NAME --image $ACR/customer-frontend:$SHA
+          # Update Registry Credentials and Images
+          az containerapp update -n grocery-backend -g $RG_NAME \
+            --image $ACR_SERVER/grocery-backend:$SHA \
+            --registry-server $ACR_SERVER --registry-username $ACR_NAME --registry-password $ACR_PASS \
+            --set-env-vars MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET
+
+          az containerapp update -n user-service -g $RG_NAME \
+            --image $ACR_SERVER/user-service:$SHA \
+            --registry-server $ACR_SERVER --registry-username $ACR_NAME --registry-password $ACR_PASS \
+            --set-env-vars MONGO_URI=$MONGO_URI
+
+          az containerapp update -n delivery-backend -g $RG_NAME \
+            --image $ACR_SERVER/delivery-backend:$SHA \
+            --registry-server $ACR_SERVER --registry-username $ACR_NAME --registry-password $ACR_PASS \
+            --set-env-vars MONGO_URI=$MONGO_URI
+
+          az containerapp update -n order-service -g $RG_NAME \
+            --image $ACR_SERVER/order-service:$SHA \
+            --registry-server $ACR_SERVER --registry-username $ACR_NAME --registry-password $ACR_PASS \
+            --set-env-vars MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET
+
+          az containerapp update -n admin-frontend -g $RG_NAME \
+            --image $ACR_SERVER/admin-frontend:$SHA \
+            --registry-server $ACR_SERVER --registry-username $ACR_NAME --registry-password $ACR_PASS
+
+          az containerapp update -n customer-frontend -g $RG_NAME \
+            --image $ACR_SERVER/customer-frontend:$SHA \
+            --registry-server $ACR_SERVER --registry-username $ACR_NAME --registry-password $ACR_PASS
