@@ -3,6 +3,10 @@ const bcrypt = require('bcryptjs');
 
 const updateProfile = async (user, body) => {
 
+    if (!body || typeof body !== 'object') {
+        throw new Error('No valid fields to update');
+    }
+
     const updates = Object.keys(body);
     const allowedUpdates = ['name', 'email', 'phoneNo', 'address'];
 
