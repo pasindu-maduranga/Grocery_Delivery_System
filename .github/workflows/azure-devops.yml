@@ -2,7 +2,7 @@ name: Azure DevOps (Build & Deploy)
 
 on:
   push:
-    branches: [ "main", "development" ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 env:
@@ -84,35 +84,36 @@ jobs:
           RG_NAME: ${{ env.RG_NAME }}
         run: |
           ACR_SERVER=$(az acr list --query "[0].loginServer" -o tsv)
-          ACR_NAME=$(az acr list --query "[0].name" -o tsv)
-          ACR_PASS=$(az acr credential show -n $ACR_NAME --query "passwords[0].value" -o tsv)
+          ACR_ID=$(az acr list --query "[0].id" -o tsv)
           SHA=${{ github.sha }}
           
-          # Update Registry Credentials and Images
-          az containerapp update -n grocery-backend -g $RG_NAME \
-            --image $ACR_SERVER/grocery-backend:$SHA \
-            --registry-server $ACR_SERVER --registry-username $ACR_NAME --registry-password $ACR_PASS \
-            --set-env-vars MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET
+          # Function to give an app permission to pull from ACR
+          setup_app_auth() {
+            local app_name=$1
+            echo "Setting up auth for $app_name..."
+            # 1. Enable System Identity
+            PRINCIPAL_ID=$(az containerapp identity assign -n $app_name -g $RG_NAME --query "principalId" -o tsv)
+            # 2. Assign AcrPull Role
+            az role assignment create --assignee $PRINCIPAL_ID --scope $ACR_ID --role "AcrPull" || true
+            # 3. Configure app to use identity for registry
+            az containerapp registry set -n $app_name -g $RG_NAME --server $ACR_SERVER --identity system
+          }
 
-          az containerapp update -n user-service -g $RG_NAME \
-            --image $ACR_SERVER/user-service:$SHA \
-            --registry-server $ACR_SERVER --registry-username $ACR_NAME --registry-password $ACR_PASS \
-            --set-env-vars MONGO_URI=$MONGO_URI
+          # Apply auth and update each app
+          setup_app_auth "grocery-backend"
+          az containerapp update -n grocery-backend -g $RG_NAME --image $ACR_SERVER/grocery-backend:$SHA --set-env-vars MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET
 
-          az containerapp update -n delivery-backend -g $RG_NAME \
-            --image $ACR_SERVER/delivery-backend:$SHA \
-            --registry-server $ACR_SERVER --registry-username $ACR_NAME --registry-password $ACR_PASS \
-            --set-env-vars MONGO_URI=$MONGO_URI
+          setup_app_auth "user-service"
+          az containerapp update -n user-service -g $RG_NAME --image $ACR_SERVER/user-service:$SHA --set-env-vars MONGO_URI=$MONGO_URI
 
-          az containerapp update -n order-service -g $RG_NAME \
-            --image $ACR_SERVER/order-service:$SHA \
-            --registry-server $ACR_SERVER --registry-username $ACR_NAME --registry-password $ACR_PASS \
-            --set-env-vars MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET
+          setup_app_auth "delivery-backend"
+          az containerapp update -n delivery-backend -g $RG_NAME --image $ACR_SERVER/delivery-backend:$SHA --set-env-vars MONGO_URI=$MONGO_URI
 
-          az containerapp update -n admin-frontend -g $RG_NAME \
-            --image $ACR_SERVER/admin-frontend:$SHA \
-            --registry-server $ACR_SERVER --registry-username $ACR_NAME --registry-password $ACR_PASS
+          setup_app_auth "order-service"
+          az containerapp update -n order-service -g $RG_NAME --image $ACR_SERVER/order-service:$SHA --set-env-vars MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET
 
-          az containerapp update -n customer-frontend -g $RG_NAME \
-            --image $ACR_SERVER/customer-frontend:$SHA \
-            --registry-server $ACR_SERVER --registry-username $ACR_NAME --registry-password $ACR_PASS
+          setup_app_auth "admin-frontend"
+          az containerapp update -n admin-frontend -g $RG_NAME --image $ACR_SERVER/admin-frontend:$SHA
+
+          setup_app_auth "customer-frontend"
+          az containerapp update -n customer-frontend -g $RG_NAME --image $ACR_SERVER/customer-frontend:$SHA
