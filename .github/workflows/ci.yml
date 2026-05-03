@@ -37,7 +37,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🔑 Login to Azure
-        uses: azure/login@6c258c41ca8d10334a11f2693da7e411516cfd21 # v1.4.6
+        uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
@@ -52,7 +52,7 @@ jobs:
         run: |
           docker build ./Grocery_Store_Management/backend/src -t ${{ steps.login-acr.outputs.registry }}/grocery-backend:${{ github.sha }} -t ${{ steps.login-acr.outputs.registry }}/grocery-backend:latest
           docker push ${{ steps.login-acr.outputs.registry }}/grocery-backend --all-tags
-          
+
           docker build ./User_Management_and_Payment_Service/backend -t ${{ steps.login-acr.outputs.registry }}/user-service:${{ github.sha }} -t ${{ steps.login-acr.outputs.registry }}/user-service:latest
           docker push ${{ steps.login-acr.outputs.registry }}/user-service --all-tags
 
@@ -66,7 +66,7 @@ jobs:
         run: |
           # Note: Build args should point to the public Azure URLs
           DOMAIN=$(az containerapp env show --name grocery-delivery-env --resource-group ${{ env.RG_NAME }} --query "properties.defaultDomain" -o tsv)
-          
+
           docker build ./frontend \
             --build-arg VITE_API_URL=https://grocery-backend.$DOMAIN/api \
             --build-arg VITE_API_URL_ORDER=https://order-service.$DOMAIN/api \
@@ -99,7 +99,7 @@ jobs:
           RG_NAME: ${{ env.RG_NAME }}
         run: |
           ACR_SERVER=${{ needs.build-and-push.outputs.acr_server }}
-          
+
           # Deploy with Environment Variables
           az containerapp update -n grocery-backend -g $RG_NAME \
             --image $ACR_SERVER/grocery-backend:${{ github.sha }} \
