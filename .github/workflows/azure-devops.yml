@@ -2,18 +2,10 @@ name: Azure DevOps (Build & Deploy)
 
 on:
   push:
-<<<<<<< HEAD
     branches: [ "main", "development" ]
   workflow_dispatch:
 
 env:
-=======
-    branches: [ "main" ]
-  workflow_dispatch:
-
-env:
-  ACR_NAME: grocerydeliveryacr${{ github.run_id }} 
->>>>>>> b41988674762e1778ca43f101e5697247fe35724
   RG_NAME: grocery-delivery-rg
   LOCATION: eastus
 
@@ -50,13 +42,9 @@ jobs:
         id: login-acr
         run: |
           ACR_SERVER=$(az acr list --query "[0].loginServer" -o tsv)
-<<<<<<< HEAD
           ACR_ID=$(az acr list --query "[0].id" -o tsv)
           echo "registry=$ACR_SERVER" >> $GITHUB_OUTPUT
           echo "registry_id=$ACR_ID" >> $GITHUB_OUTPUT
-=======
-          echo "registry=$ACR_SERVER" >> $GITHUB_OUTPUT
->>>>>>> b41988674762e1778ca43f101e5697247fe35724
           az acr login --name $(az acr list --query "[0].name" -o tsv)
 
       - name: 🐳 Build & Push Images
@@ -90,17 +78,12 @@ jobs:
             -t $ACR/customer-frontend:${{ github.sha }} -t $ACR/customer-frontend:latest
           docker push $ACR/customer-frontend --all-tags
 
-<<<<<<< HEAD
       - name: 🚀 Update Azure Apps (with Security Setup)
-=======
-      - name: 🚀 Update Azure Apps
->>>>>>> b41988674762e1778ca43f101e5697247fe35724
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           RG_NAME: ${{ env.RG_NAME }}
         run: |
-<<<<<<< HEAD
           ACR_SERVER=${{ steps.login-acr.outputs.registry }}
           ACR_ID=${{ steps.login-acr.outputs.registry_id }}
           SHA=${{ github.sha }}
@@ -126,25 +109,6 @@ jobs:
           }
 
           # Update each service
-=======
-          ACR_SERVER=$(az acr list --query "[0].loginServer" -o tsv)
-          ACR_ID=$(az acr list --query "[0].id" -o tsv)
-          SHA=${{ github.sha }}
-          
-          # Function to give an app permission to pull from ACR
-          setup_app_auth() {
-            local app_name=$1
-            echo "Setting up auth for $app_name..."
-            # 1. Enable System Identity
-            PRINCIPAL_ID=$(az containerapp identity assign -n $app_name -g $RG_NAME --query "principalId" -o tsv)
-            # 2. Assign AcrPull Role
-            az role assignment create --assignee $PRINCIPAL_ID --scope $ACR_ID --role "AcrPull" || true
-            # 3. Configure app to use identity for registry
-            az containerapp registry set -n $app_name -g $RG_NAME --server $ACR_SERVER --identity system
-          }
-
-          # Apply auth and update each app
->>>>>>> b41988674762e1778ca43f101e5697247fe35724
           setup_app_auth "grocery-backend"
           az containerapp update -n grocery-backend -g $RG_NAME --image $ACR_SERVER/grocery-backend:$SHA --set-env-vars MONGO_URI=$MONGO_URI JWT_SECRET=$JWT_SECRET
 
