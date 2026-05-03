@@ -20,7 +20,7 @@ const app = express();
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || origin.startsWith('http://localhost') || origin.includes('vercel.app') || origin === process.env.FRONTEND_URL || origin === process.env.CUSTOMER_FRONTEND_URL) {
+    if (!origin || origin.startsWith('http://localhost') || origin.includes('vercel.app') || origin.includes('azurecontainerapps.io') || origin === process.env.FRONTEND_URL || origin === process.env.CUSTOMER_FRONTEND_URL) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -49,7 +49,7 @@ app.get('/', (req, res) => {
     res.send('Grocery Management Service is running');
 });
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/api/health', (req, res) => res.json({ status: 'oks' }));
 app.use((req, res) => res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` }));
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -64,7 +64,7 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('✅ MongoDB connected');
     if (!process.env.VERCEL) {
-      app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+      app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server running on port ${PORT}`));
     }
   })
   .catch(err => { console.error('❌ MongoDB error:', err.message); process.exit(1); });

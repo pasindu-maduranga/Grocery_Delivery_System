@@ -1,7 +1,7 @@
-const { registerUser, loginUser, forgotPassword, resetPassword } = require('../services/authService');
+const { registerUser, createDriver, loginUser, forgotPassword, resetPassword } = require('../services/authService');
 const filteredUserFields = require('./filterUserController');
 
-//register new user
+// Register new customer
 const registerNewUser = async(req, res) => {
     try{
         const result = await registerUser(req.body);
@@ -12,14 +12,25 @@ const registerNewUser = async(req, res) => {
             token: result.token,
         });
     }catch(error){
-        res.status(400).json({
-            success: false,
-            message: error.message,
-        });
+        res.status(400).json({ success: false, message: error.message });
     }
 };
 
-//login
+// Admin creating driver account
+const adminCreateDriver = async (req, res) => {
+  try {
+    const result = await createDriver(req.body);
+    res.status(201).json({
+      success: true,
+      message: 'Driver profile created and email sent successfully',
+      user: filteredUserFields(result.user)
+    });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+// Login
 const userLogin = async(req, res) => {
     try{
         const { latitude, longitude, address, ...loginCredentials } = req.body;
@@ -43,94 +54,45 @@ const userLogin = async(req, res) => {
             ...result
         });
     }catch(error){
-        res.status(400).json({
-            success: false,
-            message: error.message,
-        });
+        res.status(400).json({ success: false, message: error.message });
     }
 };
 
-//google sign-in
+// Google Callback
 const googleCallback = async(req,res) => {
     const token = req.user.token;
     if (process.env.FRONTEND_URL) {
-        res.redirect(
-            `${process.env.FRONTEND_URL}/login?token=${token}`
-        );
+        res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}`);
     } else {
-        res.json({ 
-            success: true, 
-            token, 
-            user: req.user.user 
-        });
+        res.json({ success: true, token, user: req.user.user });
     }
 };
 
-//forgot password
+// Forgot Password
 const forgotAppPassword = async (req, res) => {
   try {
     const { email } = req.body;
-
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json(
-        { 
-            success: false, 
-            message: 'Valid email is required' 
-        });
-    }
-
     const result = await forgotPassword(email);
-
-    res.status(200).json({
-      success: true,
-      ...result,
-    });
+    res.status(200).json({ success: true, ...result });
   } catch (err) {
-    console.error('Forgot password error:', err.message);
-    res.status(400).json(
-        { 
-            success: false, 
-            message: err.message 
-        });
+    res.status(400).json({ success: false, message: err.message });
   }
 };
 
-//reset password
+// Reset Password
 const resetUserPassword = async (req, res) => {
   try {
     const { email, token, password } = req.body;
-
-    if (!email || !token || !password) {
-      return res.status(400).json(
-        { 
-            success: false, 
-            message: 'Email, token and new password required' 
-        });
-    }
-
-    const result = await resetPassword({ 
-            email, 
-            token, 
-            newPassword: password 
-        });
-
-    res.status(200).json({
-      success: true,
-      ...result,
-    });
+    const result = await resetPassword({ email, token, newPassword: password });
+    res.status(200).json({ success: true, ...result });
   } catch (err) {
-    console.error('Reset password error:', err.message);
-    res.status(400).json(
-        { 
-            success: false, 
-            message: err.message 
-        });
+    res.status(400).json({ success: false, message: err.message });
   }
 };
 
-
 module.exports = { 
     registerNewUser,
+    adminCreateDriver,
     userLogin,
     googleCallback,
     forgotAppPassword,

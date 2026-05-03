@@ -36,6 +36,15 @@ export default function ShopHeader({ searchQuery, setSearchQuery, cartCount }) {
             </div>
           </div>
 
+          <Link
+            to="/orders"
+            className="relative p-2 text-gray-400 hover:text-green-600 transition-colors"
+            title="My Orders"
+            aria-label="My Orders"
+          >
+            <ShoppingBag className="w-6 h-6" />
+          </Link>
+
           <Link to="/cart" className="relative p-2 text-gray-400 hover:text-green-600 transition-colors">
             <ShoppingCart className="w-6 h-6" />
             {cartCount > 0 && (

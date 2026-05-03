@@ -24,9 +24,23 @@ export const AuthProvider = ({ children }) => {
   const fetchMe = async () => {
     try {
       const res = await authAPI.me()
-      setUser(res.data.user)
+      const userData = res.data.user
+      setUser(userData)
       setSidebar(res.data.sidebar)
       setUserType('system_user')
+
+      // If user is a driver, fetch driver profile and set driverId for socket
+      if (userData.role === 'delivery_person' || userData.role?.name?.toLowerCase() === 'driver') {
+        try {
+          const { driverApi } = await import('../api/deliveryApi')
+          const dRes = await driverApi.getProfileByUserId(userData._id)
+          if (dRes.success && dRes.driver) {
+             localStorage.setItem('fc_driver_id', dRes.driver._id)
+          }
+        } catch (err) {
+          console.error('Error fetching driver profile during fetchMe:', err)
+        }
+      }
     } catch {
       localStorage.clear()
     } finally {
@@ -67,6 +81,20 @@ export const AuthProvider = ({ children }) => {
     return res.data
   }
 
+  const refreshSidebar = async () => {
+    try {
+      if (userType === 'supplier') {
+        const res = await authAPI.supplierMe()
+        setSidebar(res.data.sidebar || [])
+      } else {
+        const res = await authAPI.me()
+        setSidebar(res.data.sidebar || [])
+      }
+    } catch (err) {
+      console.error('Failed to refresh sidebar:', err)
+    }
+  }
+
   const logout = async () => {
     try { await authAPI.logout() } catch {}
     localStorage.clear()
@@ -83,12 +111,13 @@ export const AuthProvider = ({ children }) => {
   const isSupplier   = userType === 'supplier'
   const isSystemUser = userType === 'system_user'
   const isSuperAdmin = userType === 'system_user' && user?.isSuperAdmin === true
+  const isDriver     = user?.role?.name?.toLowerCase().includes('driver') || user?.role === 'delivery_person'
 
   return (
     <AuthContext.Provider value={{
       user, userType, sidebar, loading,
-      login, supplierLogin, logout, hasPermission,
-      isSupplier, isSystemUser, isSuperAdmin,
+      login, supplierLogin, logout, hasPermission, refreshSidebar,
+      isSupplier, isSystemUser, isSuperAdmin, isDriver
     }}>
       {children}
     </AuthContext.Provider>

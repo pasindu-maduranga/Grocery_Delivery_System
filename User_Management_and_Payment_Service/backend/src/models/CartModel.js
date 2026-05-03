@@ -23,6 +23,10 @@ const cartSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    isWithinColombo: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,
@@ -50,9 +54,12 @@ cartSchema.virtual("discountAmount").get(function () {
   return parseFloat(((this.subtotal * this.discount) / 100).toFixed(2));
 });
 
-// Free delivery over $30
+// Delivery Fee (200 within Colombo, 350 outside)
 cartSchema.virtual("deliveryFee").get(function () {
-  return this.subtotal > 30 ? 0 : 5.99;
+  if (this.subtotal === 0) return 0;
+  // Rule: Free delivery over 5000 LKR
+  if (this.subtotal > 5000) return 0;
+  return this.isWithinColombo ? 200 : 350;
 });
 
 // Grand total

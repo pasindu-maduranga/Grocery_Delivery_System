@@ -62,6 +62,20 @@ const OrderCard = ({ order }) => {
             ❌ Order cancelled
           </p>
         )}
+
+        {/* Track Order Button */}
+        {order.status !== "delivered" && order.status !== "cancelled" && order.status !== "pending" && (
+           <div className="mt-4 flex justify-center">
+              <a 
+                 href={`http://localhost:5173/delivery/track/${order.orderId || order._id}`}
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 className="flex items-center gap-2 px-5 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest shadow-md shadow-green-200 transition-all"
+              >
+                 <MapPin className="w-4 h-4" /> Live GPS Tracking
+              </a>
+           </div>
+        )}
       </div>
 
       {/* Expandable Details */}

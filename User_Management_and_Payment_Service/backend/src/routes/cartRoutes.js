@@ -58,4 +58,12 @@ cartRouter.post("/coupon", cartController.applyCoupon);
  */
 cartRouter.delete("/coupon", cartController.removeCoupon);
 
+/**
+ * @route   PUT /api/cart/location
+ * @desc    Update delivery location (within Colombo or not)
+ * @access  Private
+ * @body    { isWithinColombo }
+ */
+cartRouter.put("/location", cartController.updateLocation);
+
 module.exports = cartRouter;

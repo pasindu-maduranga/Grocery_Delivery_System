@@ -126,6 +126,23 @@ const removeCoupon = async (req, res) => {
   }
 };
 
+// PUT /api/cart/location
+// Updates the delivery location flag
+const updateLocation = async (req, res) => {
+  try {
+    const { isWithinColombo } = req.body;
+    const cart = await cartService.updateLocation(req.user._id, !!isWithinColombo);
+
+    res.status(200).json({
+      success: true,
+      message: "Delivery location updated",
+      cart,
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getCart,
   addItem,
@@ -134,4 +151,5 @@ module.exports = {
   clearCart,
   applyCoupon,
   removeCoupon,
+  updateLocation,
 };

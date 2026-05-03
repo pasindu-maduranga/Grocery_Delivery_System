@@ -13,6 +13,13 @@ const systemUserSchema = new mongoose.Schema(
       required: [true, 'Last name is required'],
       trim: true,
     },
+    email: {
+      type: String,
+      lowercase: true,
+      trim: true,
+      unique: true,
+      sparse: true, // Allow multiple users without email for transition
+    },
     username: {
       type: String,
       required: [true, 'Username is required'],

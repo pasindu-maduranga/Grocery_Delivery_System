@@ -130,7 +130,31 @@ const seed = async () => {
       console.log('   ✓ Super Admin role updated with latest screens');
     }
 
-    // ── STEP 5: Create Super Admin System User ─────────────────
+    // ── STEP 5: Create Driver Role ─────────────────────────────
+    console.log('\n🚲 Creating Driver Role...');
+    let driverRole = await Role.findOne({ name: 'Driver' });
+
+    if (!driverRole) {
+      driverRole = await Role.create({
+        name: 'Driver',
+        description: 'Delivery Partner with access to driver mobile features',
+        isSuperAdmin: false,
+        permissions: screens
+          .filter(s => s.code.startsWith('SCREEN_DRIVER_'))
+          .map(s => ({
+            screenCode: s.code,
+            canView: true,
+            canCreate: true,
+            canEdit: true,
+            canDelete: false
+          }))
+      });
+      console.log('   ✓ Driver role created');
+    } else {
+      console.log('   ✓ Driver role already exists');
+    }
+
+    // ── STEP 6: Create Super Admin System User ─────────────────
     console.log('\n👤 Creating Super Admin User...');
     const superUsername = process.env.SUPER_ADMIN_USERNAME || 'superadmin';
     const superPassword = process.env.SUPER_ADMIN_PASSWORD || 'SuperAdmin@123';

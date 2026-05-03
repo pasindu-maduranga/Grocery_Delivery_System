@@ -12,6 +12,8 @@ export default function ProductCard({ product, inCart, adding, onAddToCart, onDe
     image: product.groceryItem?.image || product.image,
   };
 
+  const inCartQty = Number(inCart?.quantity ?? inCart?.qty ?? 0);
+
   return (
     <div className="bg-white rounded-[1.5rem] border border-gray-100 shadow-sm hover:shadow-xl hover:border-emerald-100 transition-all duration-300 p-4 relative group flex flex-col h-full">
       <div className="absolute top-6 right-6 z-10 bg-orange-500 text-white text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg">
@@ -59,11 +61,21 @@ export default function ProductCard({ product, inCart, adding, onAddToCart, onDe
             )}
           </div>
 
-          {inCart ? (
+          {inCartQty > 0 ? (
             <div className="flex items-center justify-between bg-emerald-50 rounded-xl p-1">
-              <button onClick={() => onDecrement(product._id)} className="w-10 h-10 rounded-lg flex items-center justify-center text-emerald-700 bg-white shadow-sm hover:bg-emerald-100">-</button>
-              <span className="font-black text-emerald-900 w-8 text-center">{inCart.quantity}</span>
-              <button onClick={() => onAddToCart(payload)} className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-green-500 shadow-sm hover:bg-emerald-700">+</button>
+              <button
+                onClick={() => onDecrement(payload)}
+                className="w-10 h-10 rounded-lg flex items-center justify-center text-emerald-700 bg-white shadow-sm hover:bg-emerald-100"
+              >
+                -
+              </button>
+              <span className="font-black text-emerald-900 w-8 text-center">{inCartQty}</span>
+              <button
+                onClick={() => onAddToCart(payload)}
+                className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-green-500 shadow-sm hover:bg-emerald-700"
+              >
+                +
+              </button>
             </div>
           ) : (
             <button

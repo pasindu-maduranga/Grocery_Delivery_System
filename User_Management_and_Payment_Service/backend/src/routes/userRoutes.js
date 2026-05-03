@@ -12,6 +12,9 @@ userRouter.get('/', authMiddleware, userController.getProfile);
 //http://localhost:5003/api/user/update-profile
 userRouter.put('/update-profile', authMiddleware, userController.updateProfile);
 
+//http://localhost:5003/api/user
+userRouter.put('/', authMiddleware, userController.updateProfile);
+
 //http://localhost:5003/api/user/update-password
 userRouter.put('/update-password', authMiddleware, userController.updatePassword);
 
